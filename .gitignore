@@ -1,0 +1,165 @@
+# =========================
+
+# .NET / C#
+
+# =========================
+
+bin/
+obj/
+[Bb]uild/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+artifacts/
+
+# Visual Studio
+
+.vs/
+*.user
+*.userosscache
+*.suo
+*.userprefs
+*.rsuser
+
+# Rider / ReSharper
+
+.idea/
+*.sln.iml
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+# =========================
+
+# Test / Coverage
+
+# =========================
+
+TestResults/
+coverage/
+*.trx
+*.coverage
+*.coveragexml
+
+# =========================
+
+# Node / Angular
+
+# =========================
+
+node_modules/
+dist/
+.angular/
+.cache/
+.nx/
+.vite/
+
+# npm logs
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================
+
+# Environment / Secrets
+
+# =========================
+
+.env
+.env.*
+!.env.example
+
+# Local development configuration
+
+appsettings.Development.json
+appsettings.Local.json
+
+# Certificates / local HTTPS
+
+*.pfx
+*.p12
+
+# =========================
+
+# SQLite / Local Database
+
+# =========================
+
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# =========================
+
+# Logs
+
+# =========================
+
+logs/
+*.log
+
+# =========================
+
+# OS Files
+
+# =========================
+
+# Windows
+
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+
+# macOS
+
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+
+*~
+
+# =========================
+
+# Temporary Files
+
+# =========================
+
+*.tmp
+*.temp
+*.swp
+*.swo
+*.bak
+*.orig
+
+# =========================
+
+# Editor Files
+
+# =========================
+
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# =========================
+
+# Generated / Local Data
+
+# =========================
+
+uploads/
+attachments/
+exports/
+tmp/
+temp/
