@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using BulkEmailSender.Api.Domain.Email;
+using System.Net;
 
 namespace BulkEmailSender.Api.Services.Template;
 
@@ -31,8 +32,8 @@ public sealed class TemplateRenderer
     }
 
     public string Render(
-        string template,
-        IReadOnlyDictionary<string, string> values)
+    string template,
+    IReadOnlyDictionary<string, string> values)
     {
         return PlaceholderRegex.Replace(
             template,
@@ -43,7 +44,7 @@ public sealed class TemplateRenderer
                 return values.TryGetValue(
                     field,
                     out var value)
-                    ? value
+                    ? WebUtility.HtmlEncode(value)
                     : match.Value;
             });
     }

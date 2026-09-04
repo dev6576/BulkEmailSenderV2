@@ -104,4 +104,62 @@ public class TemplateRendererTests
 
         Assert.Equal("Hello Alice", result);
     }
+
+    [Fact]
+    public void Render_HtmlEncodesRecipientValues()
+    {
+        var values = new Dictionary<string, string>(
+            StringComparer.OrdinalIgnoreCase)
+        {
+            ["Name"] = "Alice & Bob"
+        };
+
+        var result = _renderer.Render(
+            "<p>Hi {Name}</p>",
+            values);
+
+        Assert.Equal(
+            "<p>Hi Alice &amp; Bob</p>",
+            result);
+    }
+
+    [Fact]
+    public void Render_HtmlEncodesHtmlFromRecipientData()
+    {
+        var values = new Dictionary<string, string>(
+            StringComparer.OrdinalIgnoreCase)
+        {
+            ["Name"] = "<script>alert('x')</script>"
+        };
+
+        var result = _renderer.Render(
+            "<p>Hi {Name}</p>",
+            values);
+
+        Assert.DoesNotContain(
+            "<script>",
+            result);
+
+        Assert.Contains(
+            "&lt;script&gt;",
+            result);
+    }
+
+    [Fact]
+    public void Render_DoesNotEncodeTemplateHtml()
+    {
+        var values = new Dictionary<string, string>(
+            StringComparer.OrdinalIgnoreCase)
+        {
+            ["Name"] = "Alice"
+        };
+
+        var result = _renderer.Render(
+            "<p><strong>Hi {Name}</strong></p>",
+            values);
+
+        Assert.Equal(
+            "<p><strong>Hi Alice</strong></p>",
+            result);
+    }
 }
