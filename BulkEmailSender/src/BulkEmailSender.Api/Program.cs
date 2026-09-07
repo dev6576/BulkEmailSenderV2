@@ -5,6 +5,10 @@ using BulkEmailSender.Api.Services.Template;
 using BulkEmailSender.Api.Services.Validation;
 using BulkEmailSender.Api.Contracts;
 using BulkEmailSender.Api.Domain.Email;
+using BulkEmailSender.Api.Services.Providers;
+using BulkEmailSender.Api.Services.Sending;
+
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,6 +16,12 @@ builder.Services.AddSingleton<TemplateRenderer>();
 builder.Services.AddSingleton<RecipientValidator>();
 builder.Services.AddSingleton<SendRowValidator>();
 builder.Services.AddSingleton<EmailRenderer>();
+builder.Services.AddSingleton<IEmailProvider, StubEmailProvider>();
+builder.Services.AddSingleton<SendOrchestrator>();
+builder.Services.AddScoped<SendOperationStore>();
+builder.Services.AddHostedService<SendWorker>();
+builder.Services.AddSingleton<ISendQueue, InMemorySendQueue>();
+builder.Services.AddSingleton<SendEventBroadcaster>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -88,9 +98,157 @@ app.MapPost(
 
         return Results.Ok(response);
     });
+app.MapPost(
+    "/api/send",
+    async (
+        BulkEmailSender.Api.Contracts.SendRequest request,
+        SendRowValidator validator,
+        SendOperationStore operationStore,
+        ISendQueue queue,
+        CancellationToken cancellationToken) =>
+    {
+        var recipients =
+            request.Recipients
+                .Select(recipient =>
+                    new Recipient(
+                        recipient.RowId,
+                        recipient.Values))
+                .ToList();
+
+        var email =
+            new EmailDefinition
+            {
+                Subject = request.Email.Subject,
+                Body = request.Email.Body,
+                Attachments = request.Email.Attachments
+                    .Select(attachment =>
+                        new EmailAttachment
+                        {
+                            FileName =
+                                attachment.FileName,
+                            ContentType =
+                                attachment.ContentType,
+                            Content =
+                                attachment.Content
+                        })
+                    .ToList()
+            };
+
+        foreach (var recipient in recipients)
+        {
+            var validation =
+                validator.Validate(
+                    recipient,
+                    email);
+
+            if (!validation.IsValid)
+            {
+                return Results.BadRequest(
+                    new
+                    {
+                        rowId = recipient.RowId,
+                        errors = validation.Errors
+                    });
+            }
+        }
+
+        var operation =
+            await operationStore.CreateAsync(
+                recipients,
+                email,
+                cancellationToken);
+
+        await queue.EnqueueAsync(
+            operation.Id,
+            cancellationToken);
+
+        return Results.Accepted(
+            $"/api/send/{operation.Id}",
+            new SendAcceptedResponse
+            {
+                OperationId = operation.Id,
+                Status =
+                    operation.Status.ToString(),
+                TotalRows =
+                    operation.TotalRows
+            });
+    });
+
+app.MapGet(
+    "/api/send/{operationId:guid}/events",
+    async (
+        Guid operationId,
+        SendEventBroadcaster broadcaster,
+        SendOperationStore operationStore,
+        CancellationToken cancellationToken,
+        HttpResponse response) =>
+    {
+        response.ContentType = "text/event-stream";
+        response.Headers.CacheControl = "no-cache";
+        response.Headers.Connection = "keep-alive";
+
+        // Subscribe FIRST so no live events can be missed
+        var subscription =
+            broadcaster.Subscribe(operationId);
+
+        try
+        {
+            // Replay terminal events from the database.
+            // Only Sent / Failed rows are returned.
+            var completedEvents =
+                await operationStore
+                    .GetCompletedEventsAsync(
+                        operationId,
+                        cancellationToken);
+
+            foreach (var sendEvent in completedEvents)
+            {
+                await WriteSseEventAsync(
+                    response,
+                    sendEvent,
+                    cancellationToken);
+            }
+
+            await response.Body.FlushAsync(
+                cancellationToken);
+
+            // Now consume live events.
+            await foreach (
+                var sendEvent in subscription.Reader
+                    .ReadAllAsync(cancellationToken))
+            {
+                await WriteSseEventAsync(
+                    response,
+                    sendEvent,
+                    cancellationToken);
+
+                await response.Body.FlushAsync(
+                    cancellationToken);
+            }
+        }
+        finally
+        {
+            broadcaster.Unsubscribe(
+                operationId,
+                subscription.SubscriptionId);
+        }
+    });
 
 app.UseSwagger();
 app.UseSwaggerUI();
 app.Run();
 
+
+static async Task WriteSseEventAsync(
+    HttpResponse response,
+    SendEvent sendEvent,
+    CancellationToken cancellationToken)
+{
+    var json = JsonSerializer.Serialize(sendEvent);
+
+    await response.WriteAsync(
+        $"event: row-update\n" +
+        $"data: {json}\n\n",
+        cancellationToken);
+}
 public partial class Program;

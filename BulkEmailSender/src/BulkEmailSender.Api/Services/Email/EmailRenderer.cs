@@ -1,4 +1,5 @@
 using BulkEmailSender.Api.Domain.Email;
+using BulkEmailSender.Api.Domain.Validation;
 using BulkEmailSender.Api.Services.Template;
 using BulkEmailSender.Api.Services.Validation;
 
@@ -17,23 +18,20 @@ public sealed class EmailRenderer
         _templateRenderer = templateRenderer;
     }
 
-    public PreviewResult Render(
+    public EmailRenderResult Render(
         Recipient recipient,
         EmailDefinition email)
     {
-        var validationResult =
+        var validation =
             _validator.Validate(
                 recipient,
                 email);
 
-        if (!validationResult.IsValid)
+        if (!validation.IsValid)
         {
-            return new PreviewResult
-            {
-                RowId = recipient.RowId,
-                IsValid = false,
-                Errors = validationResult.Errors
-            };
+            return EmailRenderResult.Failed(
+                recipient.RowId,
+                validation.Errors);
         }
 
         var subject =
@@ -41,21 +39,20 @@ public sealed class EmailRenderer
                 email.Subject,
                 recipient.Values);
 
-        var body =
+        var htmlBody =
             _templateRenderer.Render(
                 email.Body,
                 recipient.Values);
 
-        return new PreviewResult
+        var renderedEmail = new RenderedEmail
         {
-            RowId = recipient.RowId,
-            IsValid = true,
-            Email = new RenderedEmail
-            {
-                Subject = subject,
-                HtmlBody = body,
-                Attachments = email.Attachments
-            }
+            Subject = subject,
+            HtmlBody = htmlBody,
+            Attachments = email.Attachments
         };
+
+        return EmailRenderResult.Success(
+            recipient.RowId,
+            renderedEmail);
     }
 }
