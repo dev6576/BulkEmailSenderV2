@@ -158,6 +158,7 @@ app.MapPost(
                 email,
                 cancellationToken);
 
+
         await queue.EnqueueAsync(
             operation.Id,
             cancellationToken);

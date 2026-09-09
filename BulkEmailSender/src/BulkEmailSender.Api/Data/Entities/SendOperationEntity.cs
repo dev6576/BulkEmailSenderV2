@@ -22,4 +22,6 @@ public sealed class SendOperationEntity
 
     public ICollection<SendWorkItemEntity> WorkItems { get; set; }
         = [];
+
+    public string EmailJson { get; set; } = null!;
 }

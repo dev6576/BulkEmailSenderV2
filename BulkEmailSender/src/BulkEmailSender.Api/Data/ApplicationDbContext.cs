@@ -34,6 +34,9 @@ public class ApplicationDbContext(
 
                 entity.Property(x => x.AttachmentsJson)
                     .IsRequired();
+                    
+                entity.Property(x => x.EmailJson)
+                    .IsRequired();
 
                 entity.HasMany(x => x.WorkItems)
                     .WithOne(x => x.Operation)
