@@ -191,9 +191,23 @@ public sealed class SendWorker(
                 });
         }
 
-        await operationStore.CompleteOperationIfFinishedAsync(
+        var completedOperation =await operationStore.CompleteOperationIfFinishedAsync(
             operationId,
             cancellationToken);
+
+        if (completedOperation is not null)
+        {
+            broadcaster.Publish(
+                new SendEvent
+                {
+                    OperationId = completedOperation.Id,
+                    RowId = 0,
+                    Status = completedOperation.Status,
+                    TotalRows = completedOperation.TotalRows,
+                    SentRows = completedOperation.SentRows,
+                    FailedRows = completedOperation.FailedRows
+                });
+        }
 
         logger.LogInformation(
             "Send operation {OperationId} finished.",

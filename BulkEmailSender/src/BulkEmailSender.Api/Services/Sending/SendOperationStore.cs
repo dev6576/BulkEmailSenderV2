@@ -231,7 +231,7 @@ public sealed class SendOperationStore
             cancellationToken);
     }
 
-    public async Task CompleteOperationIfFinishedAsync(
+    public async Task<SendOperationEntity?> CompleteOperationIfFinishedAsync(
         Guid operationId,
         CancellationToken cancellationToken)
     {
@@ -243,23 +243,26 @@ public sealed class SendOperationStore
 
         if (operation is null)
         {
-            return;
+            return null;
         }
 
         var completedRows =
             operation.SentRows +
             operation.FailedRows;
 
-        if (completedRows >= operation.TotalRows)
+        if (completedRows < operation.TotalRows)
         {
-            operation.Status =
-                nameof(SendOperationStatus.Completed);
-
-            await _db.SaveChangesAsync(
-                cancellationToken);
+            return null;
         }
-    }
 
+        operation.Status =
+            nameof(SendOperationStatus.Completed);
+
+        await _db.SaveChangesAsync(
+            cancellationToken);
+
+        return operation;
+    }
     public async Task<IReadOnlyList<SendEvent>>
         GetCompletedEventsAsync(
             Guid operationId,
