@@ -1,0 +1,42 @@
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 40px 24px;
+}
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-header h1 {
+  margin: 0 0 8px;
+  font-size: 28px;
+}
+
+.page-header p {
+  margin: 0;
+  color: #6b7280;
+}
+
+.card {
+  padding: 24px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.card h2 {
+  margin-top: 0;
+}
+
+.muted {
+  color: #6b7280;
+}
+
+button {
+  margin-top: 16px;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}

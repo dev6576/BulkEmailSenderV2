@@ -1,0 +1,76 @@
+<section class="recipient-input">
+  <h2>Recipients</h2>
+
+  <p class="description">
+    Enter one recipient per line using the format:
+  </p>
+
+  <code>Email,Name</code>
+
+  <textarea
+    [formControl]="recipientText"
+    rows="10"
+    placeholder="alice@example.com,Alice
+bob@example.com,Bob">
+  </textarea>
+
+  <div class="actions">
+    <button
+      type="button"
+      (click)="parseRecipients()">
+      Load Recipients
+    </button>
+  </div>
+
+  @if (recipients.length > 0) {
+    <div class="recipient-list">
+
+      <h3>
+        {{ recipients.length }} recipients
+      </h3>
+
+      @for (recipient of recipients; track recipient.rowId) {
+        <div class="recipient-row">
+
+          <span>
+            {{ recipient.rowId }}
+          </span>
+
+          <span>
+            {{ recipient.values['Email'] }}
+          </span>
+
+          <span>
+            {{ recipient.values['Name'] }}
+          </span>
+
+          @if (getErrors(recipient.rowId).length > 0) {
+            <div class="row-errors">
+              @for (
+                error of getErrors(recipient.rowId);
+                track error
+              ) {
+                <div>{{ error }}</div>
+              }
+            </div>
+          }
+
+        </div>
+      }
+
+    </div>
+  }
+
+  @if (recipients.length > 0 && validationErrors.length > 0) {
+    <div class="validation-summary">
+      {{ validationErrors.length }}
+      recipient(s) have validation errors.
+    </div>
+  }
+
+  @if (recipients.length > 0 && validationErrors.length === 0) {
+    <div class="validation-success">
+      All recipients are valid.
+    </div>
+  }
+</section>
