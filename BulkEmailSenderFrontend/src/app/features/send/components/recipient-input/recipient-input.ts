@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, output } from '@angular/core';
 import {
   FormControl,
   ReactiveFormsModule
@@ -22,6 +22,8 @@ export class RecipientInput {
 
   validationErrors: RecipientValidationError[] = [];
 
+  recipientsChanged = output<Recipient[]>();
+
   parseRecipients(): void {
     this.validationErrors = [];
 
@@ -32,36 +34,34 @@ export class RecipientInput {
       .map(line => line.trim())
       .filter(line => line.length > 0);
 
-    this.recipients = lines.map(
-      (line, index) => {
-        const [email, name] = line
-          .split(',')
-          .map(value => value.trim());
+    this.recipients = lines.map((line, index) => {
+      const [email, name] = line
+        .split(',')
+        .map(value => value.trim());
 
-        return {
-          rowId: index + 1,
-          values: {
-            Email: email ?? '',
-            Name: name ?? ''
-          }
-        };
-      }
-    );
+      return {
+        rowId: index + 1,
+        values: {
+          Email: email ?? '',
+          Name: name ?? ''
+        }
+      };
+    });
 
     this.validateRecipients();
+
+    this.recipientsChanged.emit(this.recipients);
   }
 
   private validateRecipients(): void {
     for (const recipient of this.recipients) {
-      const email =
-        recipient.values['Email'] ?? '';
+      const email = recipient.values['Email'] ?? '';
 
       const errors: string[] = [];
 
       if (!email) {
         errors.push('Email is required.');
-      }
-      else if (!this.isValidEmail(email)) {
+      } else if (!this.isValidEmail(email)) {
         errors.push('Email address is invalid.');
       }
 
@@ -79,11 +79,11 @@ export class RecipientInput {
   }
 
   getErrors(rowId: number): string[] {
-  return this.validationErrors
-    .find(error => error.rowId === rowId)
-    ?.errors ?? [];
+    return this.validationErrors
+      .find(error => error.rowId === rowId)
+      ?.errors ?? [];
   }
-  
+
   isValid(): boolean {
     return (
       this.recipients.length > 0 &&

@@ -34,9 +34,14 @@ export interface EmailAttachmentRequest {
 
 export interface RenderedEmailResponse {
   subject: string;
-  body: string;
+  htmlBody: string;
+  attachments: EmailAttachmentResponse[];
 }
 
+export interface EmailAttachmentResponse {
+  fileName: string;
+  contentBase64: string;
+}
 export interface ValidationError {
   code: string;
   message: string;

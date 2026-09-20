@@ -1,9 +1,80 @@
 <section>
   <h1>Send Emails</h1>
 
-  <button type="button" (click)="testPreview()">
-    Test Preview API
+  <app-recipient-input
+    (recipientsChanged)="onRecipientsChanged($event)"
+  />
+
+  <section class="email-editor">
+    <h2>Email</h2>
+
+    <label>
+      Subject
+      <input
+        type="text"
+        [value]="subject"
+      />
+    </label>
+
+    <label>
+      Body
+      <textarea
+        rows="8"
+        [value]="body"></textarea>
+    </label>
+  </section>
+
+  <button
+    type="button"
+    (click)="preview()"
+    [disabled]="recipients.length === 0 || isPreviewLoading()">
+
+    @if (isPreviewLoading()) {
+      Generating preview...
+    } @else {
+      Preview
+    }
+
   </button>
 
-  <app-recipient-input />
+  <p>Loading: {{ isPreviewLoading() }}</p>
+  <p>Has preview: {{ previewResponse() !== null }}</p>
+
+  @if (previewError()) {
+    <section class="preview-error">
+      {{ previewError() }}
+    </section>
+  }
+
+  @if (previewResponse()) {
+    <section class="preview-result">
+      <h2>Preview</h2>
+
+      @if (
+        previewResponse()!.isValid &&
+        previewResponse()!.email
+      ) {
+        <h3>
+          {{ previewResponse()!.email!.subject }}
+        </h3>
+
+        <pre>
+{{ previewResponse()!.email!.htmlBody }}
+        </pre>
+      }
+
+      @if (!previewResponse()!.isValid) {
+        <h3>Preview validation failed</h3>
+
+        @for (
+          error of previewResponse()!.errors;
+          track $index
+        ) {
+          <div class="validation-error">
+            {{ error }}
+          </div>
+        }
+      }
+    </section>
+  }
 </section>
