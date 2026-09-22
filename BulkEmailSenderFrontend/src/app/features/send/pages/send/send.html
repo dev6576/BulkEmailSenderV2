@@ -1,59 +1,101 @@
 <section>
+
   <h1>Send Emails</h1>
 
   <app-recipient-input
     (recipientsChanged)="onRecipientsChanged($event)"
+    (previewRequested)="previewRecipient($event)"
   />
 
-  <section class="email-editor">
+  <form
+    class="email-editor"
+    [formGroup]="emailForm">
+
     <h2>Email</h2>
 
     <label>
       Subject
+
       <input
         type="text"
-        [value]="subject"
+        formControlName="subject"
       />
     </label>
 
-    <label>
-      Body
-      <textarea
-        rows="8"
-        [value]="body"></textarea>
-    </label>
-  </section>
+    @if (
+      emailForm.controls.subject.invalid &&
+      emailForm.controls.subject.touched
+    ) {
 
-  <button
-    type="button"
-    (click)="preview()"
-    [disabled]="recipients.length === 0 || isPreviewLoading()">
+      <div class="validation-error">
+        Subject is required.
+      </div>
 
-    @if (isPreviewLoading()) {
-      Generating preview...
-    } @else {
-      Preview
     }
 
-  </button>
+    <label>
+      Body
 
-  <p>Loading: {{ isPreviewLoading() }}</p>
-  <p>Has preview: {{ previewResponse() !== null }}</p>
+      <textarea
+        rows="8"
+        formControlName="body">
+      </textarea>
+    </label>
+
+    @if (
+      emailForm.controls.body.invalid &&
+      emailForm.controls.body.touched
+    ) {
+
+      <div class="validation-error">
+        Body is required.
+      </div>
+
+    }
+
+  </form>
+
+  @if (selectedRecipient) {
+
+    <section class="selected-recipient">
+
+      <strong>
+        Previewing:
+      </strong>
+
+      {{ selectedRecipient.values['Email'] }}
+
+    </section>
+
+  }
+
+  @if (isPreviewLoading()) {
+
+    <section class="preview-loading">
+      Generating preview...
+    </section>
+
+  }
 
   @if (previewError()) {
+
     <section class="preview-error">
       {{ previewError() }}
     </section>
+
   }
 
   @if (previewResponse()) {
+
     <section class="preview-result">
+
       <h2>Preview</h2>
 
       @if (
         previewResponse()!.isValid &&
         previewResponse()!.email
       ) {
+
         <h3>
           {{ previewResponse()!.email!.subject }}
         </h3>
@@ -61,20 +103,32 @@
         <pre>
 {{ previewResponse()!.email!.htmlBody }}
         </pre>
+
       }
 
-      @if (!previewResponse()!.isValid) {
-        <h3>Preview validation failed</h3>
+      @if (
+        !previewResponse()!.isValid
+      ) {
+
+        <h3>
+          Preview validation failed
+        </h3>
 
         @for (
           error of previewResponse()!.errors;
           track $index
         ) {
+
           <div class="validation-error">
             {{ error }}
           </div>
+
         }
+
       }
+
     </section>
+
   }
+
 </section>

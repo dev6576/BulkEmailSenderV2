@@ -4,6 +4,14 @@ import {
   signal
 } from '@angular/core';
 
+import {
+  FormControl,
+  FormGroup,
+  FormArray,
+  ReactiveFormsModule,
+  Validators
+} from '@angular/forms';
+
 import { RecipientInput } from '../../components/recipient-input/recipient-input';
 import { SendApiService } from '../../services/send-api';
 
@@ -14,30 +22,54 @@ import {
 
 @Component({
   selector: 'app-send',
-  imports: [RecipientInput],
+  imports: [
+    ReactiveFormsModule,
+    RecipientInput
+  ],
   templateUrl: './send.html',
   styleUrl: './send.css'
 })
 export class Send {
-  debugMessage = 'THIS IS THE NEW SEND COMPONENT';
-
   private readonly sendApi = inject(SendApiService);
-
-  subject = 'Hello {{Name}}';
-
-  body = `Hello {{Name}},
-
-This is a test email.`;
 
   recipients: Recipient[] = [];
 
-  previewResponse = signal<PreviewResponse | null>(null);
+  selectedRecipient: Recipient | null = null;
 
-  isPreviewLoading = signal(false);
+  previewResponse =
+    signal<PreviewResponse | null>(null);
 
-  previewError = signal<string | null>(null);
+  isPreviewLoading =
+    signal(false);
 
-  onRecipientsChanged(recipients: Recipient[]): void {
+  previewError =
+    signal<string | null>(null);
+
+  emailForm = new FormGroup({
+    subject: new FormControl(
+      'Hello {{Name}}',
+      {
+        nonNullable: true,
+        validators: [Validators.required]
+      }
+    ),
+
+    body: new FormControl(
+      `Hello {{Name}},
+
+This is a test email.`,
+      {
+        nonNullable: true,
+        validators: [Validators.required]
+      }
+    ),
+
+    attachments: new FormArray<FormControl<string>>([])
+  });
+
+  onRecipientsChanged(
+    recipients: Recipient[]
+  ): void {
     this.recipients = recipients;
 
     this.previewResponse.set(null);
@@ -49,58 +81,81 @@ This is a test email.`;
     );
   }
 
+  previewRecipient(
+    recipient: Recipient
+  ): void {
+    this.selectedRecipient = recipient;
+
+    this.previewResponse.set(null);
+    this.previewError.set(null);
+
+    this.preview();
+  }
+
   preview(): void {
-    if (this.recipients.length === 0) {
+    if (!this.selectedRecipient) {
+      return;
+    }
+
+    if (this.emailForm.invalid) {
+      this.emailForm.markAllAsTouched();
       return;
     }
 
     this.isPreviewLoading.set(true);
-    this.previewResponse.set(null);
-    this.previewError.set(null);
+
+    const formValue =
+      this.emailForm.getRawValue();
 
     const request = {
-      rowId: this.recipients[0].rowId,
-      values: this.recipients[0].values,
+      rowId: this.selectedRecipient.rowId,
+
+      values:
+        this.selectedRecipient.values,
+
       email: {
-        subject: this.subject,
-        body: this.body,
+        subject: formValue.subject,
+        body: formValue.body,
         attachments: []
       }
     };
 
-    this.sendApi.preview(request).subscribe({
-      next: response => {
-        console.log(
-          'PREVIEW RESPONSE:',
-          response
-        );
+    console.log(
+      'Sending preview request:',
+      request
+    );
 
-        this.previewResponse.set(response);
-        this.isPreviewLoading.set(false);
+    this.sendApi.preview(request)
+      .subscribe({
+        next: response => {
+          console.log(
+            'PREVIEW RESPONSE:',
+            response
+          );
 
-        console.log(
-          'Loading after response:',
-          this.isPreviewLoading()
-        );
+          this.previewResponse.set(
+            response
+          );
 
-        console.log(
-          'Response after assignment:',
-          this.previewResponse()
-        );
-      },
+          this.isPreviewLoading.set(
+            false
+          );
+        },
 
-      error: error => {
-        console.error(
-          'PREVIEW ERROR:',
-          error
-        );
+        error: error => {
+          console.error(
+            'PREVIEW ERROR:',
+            error
+          );
 
-        this.previewError.set(
-          'Unable to generate email preview.'
-        );
+          this.previewError.set(
+            'Unable to generate email preview.'
+          );
 
-        this.isPreviewLoading.set(false);
-      }
-    });
+          this.isPreviewLoading.set(
+            false
+          );
+        }
+      });
   }
 }

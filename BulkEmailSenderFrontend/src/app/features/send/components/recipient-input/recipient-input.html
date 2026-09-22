@@ -1,76 +1,74 @@
-<section class="recipient-input">
-  <h2>Recipients</h2>
+<div class="recipient-input">
 
-  <p class="description">
-    Enter one recipient per line using the format:
-  </p>
+  <div class="recipient-toolbar">
 
-  <code>Email,Name</code>
-
-  <textarea
-    [formControl]="recipientText"
-    rows="10"
-    placeholder="alice@example.com,Alice
-bob@example.com,Bob">
-  </textarea>
-
-  <div class="actions">
     <button
       type="button"
-      (click)="parseRecipients()">
-      Load Recipients
+      class="primary-button"
+      (click)="addRow()">
+      Add Row
     </button>
+
+    <label class="secondary-button csv-button">
+      Import CSV
+      <input
+        type="file"
+        accept=".csv"
+        hidden
+        (change)="onCsvSelected($event)" />
+    </label>
+
+    <button
+      type="button"
+      class="secondary-button"
+      (click)="openAddColumn()">
+      Add Column
+    </button>
+
   </div>
 
-  @if (recipients.length > 0) {
-    <div class="recipient-list">
+  @if (showAddColumnInput) {
 
-      <h3>
-        {{ recipients.length }} recipients
-      </h3>
+    <div class="add-column-panel">
 
-      @for (recipient of recipients; track recipient.rowId) {
-        <div class="recipient-row">
+      <input
+        type="text"
+        class="column-name-input"
+        placeholder="Column name"
+        [value]="newColumnName"
+        (input)="newColumnName = $any($event.target).value"
+        (keydown.enter)="confirmAddColumn()"
+        (keydown.escape)="cancelAddColumn()" />
 
-          <span>
-            {{ recipient.rowId }}
-          </span>
+      <button
+        type="button"
+        class="primary-button"
+        (click)="confirmAddColumn()">
+        Add
+      </button>
 
-          <span>
-            {{ recipient.values['Email'] }}
-          </span>
-
-          <span>
-            {{ recipient.values['Name'] }}
-          </span>
-
-          @if (getErrors(recipient.rowId).length > 0) {
-            <div class="row-errors">
-              @for (
-                error of getErrors(recipient.rowId);
-                track error
-              ) {
-                <div>{{ error }}</div>
-              }
-            </div>
-          }
-
-        </div>
-      }
+      <button
+        type="button"
+        class="secondary-button"
+        (click)="cancelAddColumn()">
+        Cancel
+      </button>
 
     </div>
   }
 
-  @if (recipients.length > 0 && validationErrors.length > 0) {
-    <div class="validation-summary">
-      {{ validationErrors.length }}
-      recipient(s) have validation errors.
-    </div>
-  }
+  <div class="grid-container">
 
-  @if (recipients.length > 0 && validationErrors.length === 0) {
-    <div class="validation-success">
-      All recipients are valid.
-    </div>
-  }
-</section>
+    <ag-grid-angular
+      class="recipient-grid"
+      [theme]="theme"
+      [rowData]="gridRows"
+      [columnDefs]="columnDefs"
+      [defaultColDef]="defaultColDef"
+      (gridReady)="onGridReady($event)"
+      (cellValueChanged)="onCellValueChanged($event)">
+    </ag-grid-angular>
+
+  </div>
+
+</div>
