@@ -1,134 +1,385 @@
-<section>
+<section class="send-page">
 
-  <h1>Send Emails</h1>
+  <!-- =====================================================
+       PAGE HEADER
+       ===================================================== -->
 
-  <app-recipient-input
-    (recipientsChanged)="onRecipientsChanged($event)"
-    (previewRequested)="previewRecipient($event)"
-  />
+  <header class="send-header">
 
-  <form
-    class="email-editor"
-    [formGroup]="emailForm">
+    <h1>
+      Send Emails
+    </h1>
 
-    <h2>Email</h2>
+  </header>
 
-    <label>
-      Subject
 
-      <input
-        type="text"
-        formControlName="subject"
+  <!-- =====================================================
+       TABS
+       ===================================================== -->
+
+  <nav
+    class="send-tabs"
+    aria-label="Send email sections">
+
+    <button
+      type="button"
+      class="send-tab"
+      [class.active]="activeTab() === 'data'"
+      (click)="selectTab('data')">
+
+      Data
+
+    </button>
+
+
+    <button
+      type="button"
+      class="send-tab"
+      [class.active]="activeTab() === 'template'"
+      (click)="selectTab('template')">
+
+      Email Template
+
+    </button>
+
+  </nav>
+
+
+  <!-- =====================================================
+       MAIN WORKSPACE
+       
+       IMPORTANT:
+       Both tab components remain mounted.
+
+       We only hide the inactive panel using CSS.
+       This preserves AG Grid state.
+       ===================================================== -->
+
+  <main class="send-workspace">
+
+
+    <!-- ===================================================
+         DATA TAB
+         =================================================== -->
+
+    <section
+      class="tab-panel data-panel"
+      [class.tab-panel-hidden]="activeTab() !== 'data'">
+
+      <app-recipient-input
+        (recipientsChanged)="onRecipientsChanged($event)"
+        (selectedRecipientsChanged)="onSelectedRecipientsChanged($event)"
+        (previewRequested)="previewRecipient($event)"
       />
-    </label>
 
-    @if (
-      emailForm.controls.subject.invalid &&
-      emailForm.controls.subject.touched
-    ) {
+    </section>
 
-      <div class="validation-error">
-        Subject is required.
+
+    <!-- ===================================================
+         EMAIL TEMPLATE TAB
+         =================================================== -->
+
+    <section
+      class="tab-panel template-panel"
+      [class.tab-panel-hidden]="activeTab() !== 'template'">
+
+      <div class="email-editor">
+
+
+        <!-- -----------------------------------------------
+             TEMPLATE HEADER
+             ----------------------------------------------- -->
+
+        <div class="section-heading">
+
+          <h2>
+            Email Template
+          </h2>
+
+          <p>
+            Use recipient column names as template
+            placeholders.
+          </p>
+
+        </div>
+
+
+        <!-- -----------------------------------------------
+             EMAIL FORM
+             ----------------------------------------------- -->
+
+        <form
+          [formGroup]="emailForm">
+
+
+          <!-- SUBJECT -->
+
+          <label>
+
+            <span>
+              Subject
+            </span>
+
+            <input
+              type="text"
+              formControlName="subject" />
+
+          </label>
+
+
+          @if (
+            emailForm.controls.subject.invalid &&
+            emailForm.controls.subject.touched
+          ) {
+
+            <div class="validation-error">
+
+              Subject is required.
+
+            </div>
+
+          }
+
+
+          <!-- BODY -->
+
+          <label>
+
+            <span>
+              Body
+            </span>
+
+            <textarea
+              rows="14"
+              formControlName="body">
+            </textarea>
+
+          </label>
+
+
+          @if (
+            emailForm.controls.body.invalid &&
+            emailForm.controls.body.touched
+          ) {
+
+            <div class="validation-error">
+
+              Body is required.
+
+            </div>
+
+          }
+
+        </form>
+
       </div>
 
-    }
+    </section>
 
-    <label>
-      Body
+  </main>
 
-      <textarea
-        rows="8"
-        formControlName="body">
-      </textarea>
-    </label>
 
-    @if (
-      emailForm.controls.body.invalid &&
-      emailForm.controls.body.touched
-    ) {
+  <!-- =====================================================
+       DOCKED PREVIEW
+       
+       This stays mounted regardless of the selected tab.
+       ===================================================== -->
 
-      <div class="validation-error">
-        Body is required.
+  <section
+    class="preview-dock"
+    [class.collapsed]="!isPreviewDockOpen()">
+
+
+    <!-- ===================================================
+         PREVIEW HEADER
+         =================================================== -->
+
+    <div class="preview-dock-header">
+
+
+      <div class="preview-dock-title">
+
+        <h2>
+          Preview
+        </h2>
+
+
+        @if (selectedRecipient) {
+
+          <span class="preview-recipient">
+
+            {{ selectedRecipient.values['Email'] }}
+
+          </span>
+
+        }
+
       </div>
 
-    }
 
-  </form>
+      <!-- MINIMIZE / EXPAND -->
 
-  @if (selectedRecipient) {
+      <button
+        type="button"
+        class="preview-toggle-button"
+        [attr.aria-expanded]="isPreviewDockOpen()"
+        [attr.aria-label]="
+          isPreviewDockOpen()
+            ? 'Minimize preview'
+            : 'Expand preview'
+        "
+        (click)="togglePreviewDock()">
 
-    <section class="selected-recipient">
+        @if (isPreviewDockOpen()) {
+          ⌄
+        } @else {
+          ⌃
+        }
 
-      <strong>
-        Previewing:
-      </strong>
+      </button>
 
-      {{ selectedRecipient.values['Email'] }}
+    </div>
 
-    </section>
 
-  }
+    <!-- ===================================================
+         PREVIEW CONTENT
+         =================================================== -->
 
-  @if (isPreviewLoading()) {
+    @if (isPreviewDockOpen()) {
 
-    <section class="preview-loading">
-      Generating preview...
-    </section>
+      <div class="preview-dock-content">
 
-  }
 
-  @if (previewError()) {
+        <!-- -----------------------------------------------
+             EMPTY STATE
+             ----------------------------------------------- -->
 
-    <section class="preview-error">
-      {{ previewError() }}
-    </section>
-
-  }
-
-  @if (previewResponse()) {
-
-    <section class="preview-result">
-
-      <h2>Preview</h2>
-
-      @if (
-        previewResponse()!.isValid &&
-        previewResponse()!.email
-      ) {
-
-        <h3>
-          {{ previewResponse()!.email!.subject }}
-        </h3>
-
-        <pre>
-{{ previewResponse()!.email!.htmlBody }}
-        </pre>
-
-      }
-
-      @if (
-        !previewResponse()!.isValid
-      ) {
-
-        <h3>
-          Preview validation failed
-        </h3>
-
-        @for (
-          error of previewResponse()!.errors;
-          track $index
+        @if (
+          !selectedRecipient &&
+          !isPreviewLoading() &&
+          !previewError() &&
+          !previewResponse()
         ) {
 
-          <div class="validation-error">
-            {{ error }}
+          <div class="preview-empty">
+
+            Click Preview on a recipient row
+            to render the email here.
+
           </div>
 
         }
 
-      }
 
-    </section>
+        <!-- -----------------------------------------------
+             LOADING
+             ----------------------------------------------- -->
 
-  }
+        @if (isPreviewLoading()) {
+
+          <div class="preview-loading">
+
+            Generating preview...
+
+
+            <div class="preview-progress">
+
+              <div
+                class="preview-progress-bar">
+              </div>
+
+            </div>
+
+          </div>
+
+        }
+
+
+        <!-- -----------------------------------------------
+             API ERROR
+             ----------------------------------------------- -->
+
+        @if (previewError()) {
+
+          <div class="preview-error">
+
+            {{ previewError() }}
+
+          </div>
+
+        }
+
+
+        <!-- -----------------------------------------------
+             PREVIEW RESPONSE
+             ----------------------------------------------- -->
+
+        @if (previewResponse()) {
+
+
+          <!-- VALID PREVIEW -->
+
+          @if (
+            previewResponse()!.isValid &&
+            previewResponse()!.email
+          ) {
+
+            <div class="preview-result">
+
+
+              <h3>
+
+                {{ previewResponse()!.email!.subject }}
+
+              </h3>
+
+
+              <pre>
+{{ previewResponse()!.email!.htmlBody }}
+              </pre>
+
+
+            </div>
+
+          }
+
+
+          <!-- INVALID PREVIEW -->
+
+          @if (!previewResponse()!.isValid) {
+
+            <div class="preview-result">
+
+
+              <h3>
+                Preview validation failed
+              </h3>
+
+
+              @for (
+                error of previewResponse()!.errors;
+                track $index
+              ) {
+
+                <div class="validation-error">
+
+                  {{ error.message }}
+
+                </div>
+
+              }
+
+
+            </div>
+
+          }
+
+        }
+
+      </div>
+
+    }
+
+  </section>
 
 </section>

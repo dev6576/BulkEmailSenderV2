@@ -5,9 +5,9 @@ import {
 } from '@angular/core';
 
 import {
+  FormArray,
   FormControl,
   FormGroup,
-  FormArray,
   ReactiveFormsModule,
   Validators
 } from '@angular/forms';
@@ -16,9 +16,11 @@ import { RecipientInput } from '../../components/recipient-input/recipient-input
 import { SendApiService } from '../../services/send-api';
 
 import {
-  Recipient,
-  PreviewResponse
+  PreviewResponse,
+  Recipient
 } from '../../models/send.models';
+
+type SendTab = 'data' | 'template';
 
 @Component({
   selector: 'app-send',
@@ -33,17 +35,15 @@ export class Send {
   private readonly sendApi = inject(SendApiService);
 
   recipients: Recipient[] = [];
-
+  selectedRecipients: Recipient[] = [];
   selectedRecipient: Recipient | null = null;
 
-  previewResponse =
-    signal<PreviewResponse | null>(null);
+  activeTab = signal<SendTab>('data');
+  isPreviewDockOpen = signal(true);
 
-  isPreviewLoading =
-    signal(false);
-
-  previewError =
-    signal<string | null>(null);
+  previewResponse = signal<PreviewResponse | null>(null);
+  isPreviewLoading = signal(false);
+  previewError = signal<string | null>(null);
 
   emailForm = new FormGroup({
     subject: new FormControl(
@@ -67,29 +67,40 @@ This is a test email.`,
     attachments: new FormArray<FormControl<string>>([])
   });
 
-  onRecipientsChanged(
-    recipients: Recipient[]
-  ): void {
+  selectTab(tab: SendTab): void {
+    this.activeTab.set(tab);
+  }
+
+  onRecipientsChanged(recipients: Recipient[]): void {
     this.recipients = recipients;
 
     this.previewResponse.set(null);
     this.previewError.set(null);
 
+    console.log('Recipients received by Send:', recipients);
+  }
+
+  onSelectedRecipientsChanged(recipients: Recipient[]): void {
+    this.selectedRecipients = recipients;
+
     console.log(
-      'Recipients received by Send:',
+      'Selected recipients:',
       recipients
     );
   }
 
-  previewRecipient(
-    recipient: Recipient
-  ): void {
+  previewRecipient(recipient: Recipient): void {
     this.selectedRecipient = recipient;
+    this.isPreviewDockOpen.set(true);
 
     this.previewResponse.set(null);
     this.previewError.set(null);
 
     this.preview();
+  }
+
+  togglePreviewDock(): void {
+    this.isPreviewDockOpen.update(isOpen => !isOpen);
   }
 
   preview(): void {
@@ -98,21 +109,18 @@ This is a test email.`,
     }
 
     if (this.emailForm.invalid) {
+      this.activeTab.set('template');
       this.emailForm.markAllAsTouched();
       return;
     }
 
     this.isPreviewLoading.set(true);
 
-    const formValue =
-      this.emailForm.getRawValue();
+    const formValue = this.emailForm.getRawValue();
 
     const request = {
       rowId: this.selectedRecipient.rowId,
-
-      values:
-        this.selectedRecipient.values,
-
+      values: this.selectedRecipient.values,
       email: {
         subject: formValue.subject,
         body: formValue.body,
@@ -133,13 +141,8 @@ This is a test email.`,
             response
           );
 
-          this.previewResponse.set(
-            response
-          );
-
-          this.isPreviewLoading.set(
-            false
-          );
+          this.previewResponse.set(response);
+          this.isPreviewLoading.set(false);
         },
 
         error: error => {
@@ -152,9 +155,7 @@ This is a test email.`,
             'Unable to generate email preview.'
           );
 
-          this.isPreviewLoading.set(
-            false
-          );
+          this.isPreviewLoading.set(false);
         }
       });
   }

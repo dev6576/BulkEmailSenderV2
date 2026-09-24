@@ -1,74 +1,150 @@
 <div class="recipient-input">
 
-  <div class="recipient-toolbar">
+  <!-- =========================================================
+       HEADER
+       ========================================================= -->
 
-    <button
-      type="button"
-      class="primary-button"
-      (click)="addRow()">
-      Add Row
-    </button>
+  <div class="recipient-header">
+    <div>
+      <h2>Recipients</h2>
+      <p>Add recipients manually or import them from a CSV, XLS, or XLSX file.</p>
+    </div>
 
-    <label class="secondary-button csv-button">
-      Import CSV
-      <input
-        type="file"
-        accept=".csv"
-        hidden
-        (change)="onCsvSelected($event)" />
-    </label>
-
-    <button
-      type="button"
-      class="secondary-button"
-      (click)="openAddColumn()">
-      Add Column
-    </button>
-
-  </div>
-
-  @if (showAddColumnInput) {
-
-    <div class="add-column-panel">
-
-      <input
-        type="text"
-        class="column-name-input"
-        placeholder="Column name"
-        [value]="newColumnName"
-        (input)="newColumnName = $any($event.target).value"
-        (keydown.enter)="confirmAddColumn()"
-        (keydown.escape)="cancelAddColumn()" />
-
+    <div class="header-actions">
       <button
         type="button"
-        class="primary-button"
-        (click)="confirmAddColumn()">
-        Add
+        class="secondary-button"
+        (click)="addRow()">
+        Add Row
       </button>
 
       <button
         type="button"
         class="secondary-button"
-        (click)="cancelAddColumn()">
-        Cancel
+        (click)="previewFirstRow()">
+        Preview
       </button>
 
+      <label class="file-button">
+        Import File
+        <input
+          type="file"
+          accept=".csv,.xls,.xlsx"
+          (change)="onCsvSelected($event)" />
+      </label>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       ADD COLUMN
+       ========================================================= -->
+
+  <div class="add-column-panel">
+    <input
+      type="text"
+      class="column-name-input"
+      placeholder="New column name"
+      [(ngModel)]="newColumnName" />
+
+    <button
+      type="button"
+      class="secondary-button"
+      (click)="addColumn()">
+      Add Column
+    </button>
+  </div>
+
+  <!-- =========================================================
+       FILE IMPORT STATUS
+       ========================================================= -->
+
+  @if (isImportingCsv) {
+    <div class="csv-loading">
+      <div class="csv-loading-text">
+        Importing file...
+      </div>
+
+      <div class="validation-progress">
+        <div class="validation-progress-bar"></div>
+      </div>
     </div>
   }
 
-  <div class="grid-container">
+  <!-- =========================================================
+       SUMMARY
+       ========================================================= -->
 
-    <ag-grid-angular
-      class="recipient-grid"
-      [theme]="theme"
-      [rowData]="gridRows"
-      [columnDefs]="columnDefs"
-      [defaultColDef]="defaultColDef"
-      (gridReady)="onGridReady($event)"
-      (cellValueChanged)="onCellValueChanged($event)">
-    </ag-grid-angular>
+  @if (gridRows.length > 0) {
+    <div class="recipient-summary">
+      <span>
+        Rows: {{ gridRows.length }}
+      </span>
 
+      @if (validRowCount > 0) {
+        <span class="valid">
+          Validated: {{ validRowCount }}
+        </span>
+      }
+
+      @if (invalidRowCount > 0) {
+        <span class="invalid">
+          Invalid: {{ invalidRowCount }}
+        </span>
+      }
+    </div>
+  }
+
+  <!-- =========================================================
+       GRID TOOLBAR
+       ========================================================= -->
+
+  <div class="grid-toolbar">
+    <button
+      type="button"
+      class="validate-button"
+      [disabled]="isValidating || isImportingCsv"
+      (click)="validateRows()">
+
+      @if (isValidating) {
+        Validating...
+      } @else {
+        Validate Rows
+      }
+
+    </button>
   </div>
+
+  @if (isValidating) {
+    <div class="validation-progress">
+      <div class="validation-progress-bar"></div>
+    </div>
+  }
+
+  <!-- =========================================================
+       GRID
+       ========================================================= -->
+
+  @if (gridRows.length > 0) {
+    <div class="grid-container">
+      <ag-grid-angular
+        class="recipient-grid"
+        [theme]="theme"
+        [rowData]="gridRows"
+        [columnDefs]="columnDefs"
+        [defaultColDef]="defaultColDef"
+        [rowSelection]="rowSelection"
+        [selectionColumnDef]="selectionColumnDef"
+        [getRowId]="getRowId"
+        [getRowClass]="getRowClass"
+        (gridReady)="onGridReady($event)"
+        (selectionChanged)="onSelectionChanged()"
+        (cellValueChanged)="onCellValueChanged($event)">
+      </ag-grid-angular>
+    </div>
+  } @else {
+    <div class="empty-state">
+      No recipients yet. Add a row or import a file to get started.
+    </div>
+  }
 
 </div>

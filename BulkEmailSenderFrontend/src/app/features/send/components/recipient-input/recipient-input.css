@@ -1,21 +1,27 @@
-.recipient-input {
+:host {
+  display: block;
   width: 100%;
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
 }
 
-
-/* =========================================================
-   HEADER
-   ========================================================= */
-
-.recipient-header {
+.recipient-input {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
   display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
 
+/* HEADER */
+.recipient-header {
+  flex: 0 0 auto;
+  display: flex;
   justify-content: space-between;
-
   align-items: flex-start;
-
   gap: 24px;
-
   margin-bottom: 16px;
 }
 
@@ -25,20 +31,13 @@
 
 .recipient-header p {
   margin: 0;
-
   color: #666;
 }
 
-
-/* =========================================================
-   BUTTONS
-   ========================================================= */
-
+/* BUTTONS */
 .header-actions {
   display: flex;
-
   gap: 8px;
-
   align-items: center;
 }
 
@@ -46,234 +45,242 @@
 .primary-button,
 .file-button {
   display: inline-flex;
-
   align-items: center;
-
   justify-content: center;
-
   padding: 8px 14px;
-
   border: 1px solid #ccc;
-
   border-radius: 6px;
-
   cursor: pointer;
-
   font-size: 14px;
 }
 
-.secondary-button {
-  background: #f5f5f5;
-}
-
-.secondary-button:hover {
-  background: #eaeaea;
-}
-
-.secondary-button:active {
-  background: #ddd;
-}
+.secondary-button { background: #f5f5f5; }
+.secondary-button:hover { background: #eaeaea; }
+.secondary-button:active { background: #ddd; }
 
 .primary-button {
   background: #222;
-
   color: white;
-
   border-color: #222;
 }
 
-.primary-button:hover {
-  background: #444;
-}
+.primary-button:hover { background: #444; }
 
-.file-button {
-  background: #f5f5f5;
-}
+.file-button { background: #f5f5f5; }
+.file-button:hover { background: #eaeaea; }
+.file-button input { display: none; }
 
-.file-button:hover {
-  background: #eaeaea;
-}
-
-.file-button input {
-  display: none;
-}
-
-
-/* =========================================================
-   ADD COLUMN PANEL
-   ========================================================= */
-
+/* ADD COLUMN PANEL */
 .add-column-panel {
+  flex: 0 0 auto;
   display: flex;
-
   align-items: center;
-
   gap: 8px;
-
   margin-bottom: 16px;
-
   padding: 12px;
-
   border: 1px solid #ddd;
-
   border-radius: 8px;
-
   background: #fafafa;
 }
 
 .column-name-input {
   width: 250px;
-
   padding: 8px 10px;
-
   border: 1px solid #bbb;
-
   border-radius: 6px;
-
   font-size: 14px;
-
   outline: none;
 }
 
 .column-name-input:focus {
   border-color: #666;
-
-  box-shadow:
-    0 0 0 2px
-    rgba(0, 0, 0, 0.08);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.08);
 }
 
-
-/* =========================================================
-   SUMMARY
-   ========================================================= */
-
+/* SUMMARY */
 .recipient-summary {
+  flex: 0 0 auto;
   display: flex;
-
   gap: 16px;
-
   margin-bottom: 12px;
-
   font-size: 14px;
 }
 
-.valid {
-  color: #188038;
+.valid { color: #188038; }
+.invalid { color: #c5221f; }
+
+/* TOOLBAR */
+.grid-toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-bottom: 10px;
 }
 
-.invalid {
-  color: #c5221f;
+.validate-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
+  padding: 8px 16px;
+  border: 1px solid #222;
+  border-radius: 6px;
+  background: #222;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
 }
 
+.validate-button:hover:not(:disabled) { background: #444; }
+.validate-button:active:not(:disabled) { background: #111; }
+.validate-button:disabled { opacity: 0.65; cursor: wait; }
 
-/* =========================================================
-   GRID
-   ========================================================= */
-
-.grid-container {
+/* PROGRESS */
+.validation-progress {
+  flex: 0 0 auto;
   width: 100%;
-
-  height: 400px;
+  height: 4px;
+  margin-bottom: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: #e5e7eb;
 }
 
-.recipient-grid {
-  width: 100%;
-
+.validation-progress-bar {
+  width: 35%;
   height: 100%;
+  border-radius: 2px;
+  background: #222;
+  animation: validation-progress-animation 1s ease-in-out infinite;
 }
 
+@keyframes validation-progress-animation {
+  0% { transform: translateX(-120%); }
+  50% { transform: translateX(180%); }
+  100% { transform: translateX(300%); }
+}
 
-/* =========================================================
-   EMPTY STATE
-   ========================================================= */
+/* FILE IMPORT */
+.csv-loading {
+  flex: 0 0 auto;
+  margin-bottom: 10px;
+}
 
-.empty-state {
-  margin-top: 12px;
-
-  padding: 24px;
-
-  text-align: center;
-
-  border: 1px dashed #ccc;
-
-  border-radius: 8px;
-
+.csv-loading-text {
+  margin-bottom: 6px;
+  font-size: 13px;
   color: #666;
 }
 
-
-/* =========================================================
-   VALIDATION
-   ========================================================= */
-
-.validation-summary {
-  margin-top: 16px;
-
-  padding: 16px;
-
-  border: 1px solid #f0c0c0;
-
-  border-radius: 6px;
+/* GRID */
+.grid-container {
+  flex: 1 1 0;
+  width: 100%;
+  min-height: 200px;
+  overflow: hidden;
 }
 
-.validation-summary h3 {
-  margin-top: 0;
+.recipient-grid {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
 }
 
-.validation-row {
-  display: flex;
-
-  align-items: center;
-
-  gap: 12px;
-
-  margin-bottom: 8px;
+/* EMPTY STATE */
+.empty-state {
+  flex: 1 1 auto;
+  min-height: 120px;
+  margin-top: 12px;
+  padding: 24px;
+  text-align: center;
+  border: 1px dashed #ccc;
+  border-radius: 8px;
+  color: #666;
 }
 
-.validation-row span {
-  color: #c5221f;
-}
-
+/* DELETE */
 .delete-button {
   padding: 4px 10px;
-
   border: 1px solid #ccc;
-
   border-radius: 4px;
-
   cursor: pointer;
-
   background: white;
 }
 
-.delete-button:hover {
-  background: #f5f5f5;
-}
+.delete-button:hover { background: #f5f5f5; }
 
-
-/* =========================================================
-   PREVIEW BUTTON
-   ========================================================= */
-
+/* PREVIEW */
 .grid-preview-button {
   padding: 4px 10px;
-
   border: 1px solid #ccc;
-
   border-radius: 4px;
-
   cursor: pointer;
-
   background: white;
-
   font-size: 13px;
 }
 
-.grid-preview-button:hover {
-  background: #f0f0f0;
+.grid-preview-button:hover { background: #f0f0f0; }
+.grid-preview-button:active { background: #e5e5e5; }
+
+/* VALIDATION CELL */
+.validation-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
-.grid-preview-button:active {
-  background: #e5e5e5;
+.validation-cell-success { color: #16803c; }
+.validation-cell-warning { color: #b45309; }
+
+.validation-success,
+.validation-warning {
+  flex-shrink: 0;
+  cursor: help;
+}
+
+.validation-success {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.validation-warning { font-size: 16px; }
+
+.validation-message {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: help;
+}
+
+/* INVALID ROW */
+:host ::ng-deep
+.recipient-row-invalid
+.ag-cell {
+  background-color: #fff1f2 !important;
+}
+
+:host ::ng-deep
+.recipient-row-invalid
+.ag-cell:first-child {
+  border-left: 4px solid #dc2626 !important;
+}
+
+:host ::ng-deep
+.recipient-row-invalid
+.validation-cell {
+  background-color: #fee2e2 !important;
+  font-weight: 500;
+}
+
+:host ::ng-deep
+.recipient-row-valid
+.ag-cell {
+  background-color: transparent;
 }
