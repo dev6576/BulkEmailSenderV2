@@ -284,3 +284,36 @@
 .ag-cell {
   background-color: transparent;
 }
+
+
+.send-status-cell {
+  display: flex;
+
+  align-items: center;
+
+  gap: 6px;
+
+  height: 100%;
+
+  font-size: 13px;
+}
+
+
+.send-status-success {
+  color: #16794c;
+}
+
+
+.send-status-failed {
+  color: #b42318;
+}
+
+
+.send-status-sending {
+  color: #666;
+}
+
+
+.send-status-icon {
+  font-weight: 700;
+}

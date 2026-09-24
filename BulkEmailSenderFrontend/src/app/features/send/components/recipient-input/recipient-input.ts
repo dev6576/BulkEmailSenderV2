@@ -5,6 +5,10 @@ import {
   output
 } from '@angular/core';
 
+import {
+  SendEvent
+} from '../../models/send.models';
+
 import { FormsModule } from '@angular/forms';
 
 import {
@@ -80,6 +84,10 @@ export class RecipientInput {
   @Input()
   emailColumns: string[] = [];
 
+  @Input()
+  sendRowEvents: Map<number, SendEvent> =
+    new Map<number, SendEvent>();
+
   recipientsChanged =
     output<Recipient[]>();
 
@@ -138,6 +146,8 @@ export class RecipientInput {
 
   newColumnName = '';
 
+  showAddColumnInput = false;
+
   isValidating = false;
 
   isImportingCsv = false;
@@ -172,7 +182,8 @@ export class RecipientInput {
 
   readonly getRowId = (
     params: { data: RecipientGridRow }
-  ): string => String(params.data.rowId);
+  ): string =>
+    String(params.data.rowId);
 
 
   onGridReady(
@@ -182,6 +193,7 @@ export class RecipientInput {
     this.gridApi = event.api;
 
     this.rebuildColumns();
+
     this.emitSelectedRecipients();
 
   }
@@ -200,6 +212,8 @@ export class RecipientInput {
 
       this.createValidationColumn(),
 
+      this.createSendStatusColumn(),
+
       ...dataColumns.map(
         column =>
           this.createDataColumn(column)
@@ -212,73 +226,20 @@ export class RecipientInput {
   }
 
 
-  private getDataColumns(): string[] {
+  /* =======================================================
+     SEND STATUS COLUMN
+     ======================================================= */
 
-    const columns =
-      new Set<string>();
-
-    /*
-     * Get columns from existing rows.
-     */
-    for (const row of this.gridRows) {
-
-      for (const key of Object.keys(row)) {
-
-        if (key !== 'rowId') {
-
-          columns.add(key);
-
-        }
-
-      }
-
-    }
-
-    /*
-     * Also include explicitly configured columns.
-     */
-    for (const column of this.emailColumns) {
-
-      columns.add(column);
-
-    }
-
-    return [...columns];
-
-  }
-
-
-  private createDataColumn(
-    columnName: string
-  ): ColDef<RecipientGridRow> {
-
-    return {
-
-      field: columnName,
-
-      headerName: columnName,
-
-      editable: true,
-
-      cellEditor: 'agTextCellEditor',
-
-      cellDataType: 'text'
-
-    };
-
-  }
-
-
-  private createValidationColumn():
+  private createSendStatusColumn():
     ColDef<RecipientGridRow> {
 
     return {
 
-      colId: 'validation',
+      colId: 'sendStatus',
 
-      headerName: 'Validation',
+      headerName: 'Send Status',
 
-      width: 280,
+      width: 150,
 
       editable: false,
 
@@ -294,20 +255,16 @@ export class RecipientInput {
           return '';
         }
 
-        const rowId = params.data.rowId;
+        const event =
+          this.sendRowEvents.get(
+            params.data.rowId
+          );
 
-        if (!this.validatedRows.has(rowId)) {
+        if (!event) {
           return '';
         }
 
-        const errors =
-          this.validationState.get(rowId);
-
-        if (!errors || errors.length === 0) {
-          return '✓';
-        }
-
-        return `⚠️ ${errors[0]}`;
+        return event.status;
 
       },
 
@@ -324,32 +281,31 @@ export class RecipientInput {
             return '';
           }
 
-          const hasBeenValidated =
-            this.validatedRows.has(row.rowId);
+          const event =
+            this.sendRowEvents.get(
+              row.rowId
+            );
 
-          /*
-           * A new or changed row has no validation
-           * result yet. Keep the status cell empty.
-           */
-          if (!hasBeenValidated) {
+          if (!event) {
             return '';
           }
 
-          const errors =
-            this.validationState.get(row.rowId);
+          const status =
+            event.status;
 
-          /*
-           * Valid row.
-           */
-          if (!errors || errors.length === 0) {
+
+          if (status === 'Sent') {
 
             return `
               <div
-                class="validation-cell validation-cell-success"
-                title="Row is valid">
+                class="send-status-cell send-status-success">
 
-                <span class="validation-success">
+                <span class="send-status-icon">
                   ✓
+                </span>
+
+                <span>
+                  Sent
                 </span>
 
               </div>
@@ -357,23 +313,54 @@ export class RecipientInput {
 
           }
 
-          /*
-           * Invalid row.
-           */
+
+          if (status === 'Failed') {
+
+            const errorText =
+              event.errors.length > 0
+                ? event.errors.join('\n')
+                : 'The email could not be sent.';
+
+            return `
+              <div
+                class="send-status-cell send-status-failed"
+                title="${this.escapeHtml(errorText)}">
+
+                <span class="send-status-icon">
+                  ⚠
+                </span>
+
+                <span>
+                  Failed
+                </span>
+
+              </div>
+            `;
+
+          }
+
+
+          if (status === 'Sending') {
+
+            return `
+              <div
+                class="send-status-cell send-status-sending">
+
+                <span>
+                  Sending...
+                </span>
+
+              </div>
+            `;
+
+          }
+
+
           return `
             <div
-              class="validation-cell validation-cell-warning"
-              title="${this.escapeHtml(
-                errors.join('\n')
-              )}">
+              class="send-status-cell">
 
-              <span class="validation-warning">
-                ⚠️
-              </span>
-
-              <span class="validation-message">
-                ${this.escapeHtml(errors[0])}
-              </span>
+              ${this.escapeHtml(status)}
 
             </div>
           `;
@@ -385,57 +372,126 @@ export class RecipientInput {
   }
 
 
-  private createActionColumn():
-    ColDef<RecipientGridRow> {
+  /* =======================================================
+     SEND STATUS REFRESH
+     ======================================================= */
+
+  refreshSendStatusCells(
+    sendRowEvents: Map<number, SendEvent>
+  ): void {
+
+    /*
+     * IMPORTANT:
+     *
+     * The parent updates its signal and then immediately
+     * calls this method.
+     *
+     * Angular may not have propagated the new @Input()
+     * value into this component yet.
+     *
+     * Therefore we explicitly assign the Map here.
+     */
+    this.sendRowEvents =
+      sendRowEvents;
+
+
+    console.log(
+      'refreshSendStatusCells map:',
+      [...sendRowEvents.entries()]
+    );
+
+
+    if (!this.gridApi) {
+      return;
+    }
+
+
+    /*
+     * Force AG Grid to re-evaluate the external
+     * send-status state.
+     */
+    this.gridApi.refreshCells({
+
+      columns: [
+        'sendStatus'
+      ],
+
+      force: true
+
+    });
+
+
+    /*
+     * Force the row renderers to execute again.
+     */
+    this.gridApi.redrawRows();
+
+
+    /*
+     * Ensure Angular updates the component view.
+     */
+    this.changeDetectorRef.detectChanges();
+
+  }
+
+
+  /* =======================================================
+     COLUMN HELPERS
+     ======================================================= */
+
+  private getDataColumns(): string[] {
+
+    const columns =
+      new Set<string>();
+
+
+    for (
+      const row
+      of this.gridRows
+    ) {
+
+      for (
+        const key
+        of Object.keys(row)
+      ) {
+
+        if (
+          key !== 'rowId'
+        ) {
+
+          columns.add(key);
+
+        }
+
+      }
+
+    }
+
+
+    return [
+      ...columns
+    ];
+
+  }
+
+
+  private createDataColumn(
+    column: string
+  ): ColDef<RecipientGridRow> {
 
     return {
 
-      headerName: 'Actions',
+      field: column,
 
-      width: 150,
+      headerName: column,
 
-      editable: false,
+      editable: true,
 
-      cellRenderer:
-        (
-          params:
-            ICellRendererParams<RecipientGridRow>
-        ) => {
+      flex: 1,
 
-          if (!params.data) {
-            return '';
-          }
+      minWidth: 150,
 
-          const button = document.createElement('button');
-
-          button.type = 'button';
-          button.className = 'grid-preview-button';
-          button.textContent = 'Preview';
-
-          button.addEventListener('click', event => {
-            event.stopPropagation();
-
-            if (!params.data) {
-              return;
-            }
-
-            if (!this.validateSingleRow(params.data)) {
-              this.refreshGrid(true);
-              this.changeDetectorRef.detectChanges();
-              return;
-            }
-
-            this.refreshGrid(true);
-            this.changeDetectorRef.detectChanges();
-
-            this.previewRequested.emit(
-              this.gridRowToRecipient(params.data)
-            );
-          });
-
-          return button;
-
-        }
+      cellEditor: 'agTextCellEditor'
 
     };
 
@@ -443,86 +499,115 @@ export class RecipientInput {
 
 
   /* =======================================================
-     ROW CLASS
+     ADD COLUMN UI
      ======================================================= */
 
-  getRowClass = (
-    params: {
-      data?: RecipientGridRow;
-    }
-  ): string => {
+  openAddColumn(): void {
 
-    if (!params.data) {
-      return '';
-    }
+    this.showAddColumnInput =
+      true;
 
-    const errors =
-      this.validationState.get(
-        params.data.rowId
-      );
+    this.newColumnName =
+      '';
 
-    if (
-      errors &&
-      errors.length > 0
-    ) {
+    this.changeDetectorRef.detectChanges();
 
-      return 'recipient-row-invalid';
-
-    }
-
-    return 'recipient-row-valid';
-
-  };
-
-
-  /* =======================================================
-     ROW SELECTION
-     ======================================================= */
-
-  onSelectionChanged(): void {
-    this.emitSelectedRecipients();
-  }
-
-  private emitSelectedRecipients(): void {
-    if (!this.gridApi) {
-      this.selectedRecipientsChanged.emit([]);
-      return;
-    }
-
-    const selectedRows = this.gridApi.getSelectedRows();
-
-    this.selectedRecipientsChanged.emit(
-      selectedRows.map(row => this.gridRowToRecipient(row))
-    );
   }
 
 
-  /* =======================================================
-     CELL EDITING
-     ======================================================= */
+  cancelAddColumn(): void {
 
-  onCellValueChanged(
-    event: CellValueChangedEvent<RecipientGridRow>
-  ): void {
+    this.showAddColumnInput =
+      false;
 
-    if (!event.data) {
-      return;
-    }
+    this.newColumnName =
+      '';
+
+    this.changeDetectorRef.detectChanges();
+
+  }
+
+
+  addColumn(): void {
+
+    const columnName =
+      this.newColumnName.trim();
+
 
     /*
-     * Editing a row makes its previous validation
-     * result stale. Do not validate automatically.
+     * Keep the input open when validation fails.
      */
-    this.validationState.delete(event.data.rowId);
-    this.validatedRows.delete(event.data.rowId);
+    if (!columnName) {
 
-    this.refreshGrid();
+      return;
+
+    }
+
+
+    const existingColumns =
+      this.getDataColumns();
+
+
+    if (
+      existingColumns.some(
+        column =>
+          column.toLowerCase() ===
+          columnName.toLowerCase()
+      )
+    ) {
+
+      alert(
+        `Column "${columnName}" already exists.`
+      );
+
+      return;
+
+    }
+
+
+    /*
+     * Add the new column to every existing row.
+     */
+    for (
+      const row
+      of this.gridRows
+    ) {
+
+      row[columnName] = '';
+
+    }
+
+
+    /*
+     * Rebuild AG Grid columns so the new column
+     * becomes visible.
+     */
+    this.rebuildColumns();
+
+
+    this.refreshGrid(
+      true
+    );
+
+
+    /*
+     * Clear and hide the add-column UI after
+     * a successful add.
+     */
+    this.newColumnName =
+      '';
+
+    this.showAddColumnInput =
+      false;
+
+
     this.emitRecipients();
+
   }
 
 
   /* =======================================================
-     ADD ROW
+     ROW MANAGEMENT
      ======================================================= */
 
   addRow(): void {
@@ -535,1033 +620,33 @@ export class RecipientInput {
         rowId
       };
 
-    /*
-     * Initialize every existing column
-     * with an empty value.
-     */
+
     for (
       const column
       of this.getDataColumns()
     ) {
 
-      row[column] = '';
+      row[column] =
+        '';
 
     }
+
 
     this.gridRows = [
       ...this.gridRows,
       row
     ];
 
-    /*
-     * New rows start without validation.
-     */
-    this.validationState.delete(
-      rowId
+
+    this.refreshGrid(
+      true
     );
 
-    this.validatedRows.delete(
-      rowId
-    );
-
-    this.rebuildColumns();
 
     this.emitRecipients();
 
-    this.refreshGrid();
-
-    this.changeDetectorRef.detectChanges();
-
   }
 
-
-  /* =======================================================
-     ADD COLUMN
-     ======================================================= */
-
-  addColumn(): void {
-
-    const columnName =
-      this.newColumnName.trim();
-
-    if (!columnName) {
-      return;
-    }
-
-    const existingColumns =
-      this.getDataColumns();
-
-    const alreadyExists =
-      existingColumns.some(
-        column =>
-          column.toLowerCase() ===
-          columnName.toLowerCase()
-      );
-
-    if (alreadyExists) {
-
-      alert(
-        'A column with this name already exists.'
-      );
-
-      return;
-
-    }
-
-    /*
-     * Add the new property to every
-     * existing row.
-     */
-    for (const row of this.gridRows) {
-
-      row[columnName] = '';
-
-    }
-
-    this.emailColumns = [
-      ...this.emailColumns,
-      columnName
-    ];
-
-    this.newColumnName = '';
-
-    /*
-     * Adding a column invalidates any previous
-     * validation result because the row now has
-     * another required field.
-     */
-    this.validationState.clear();
-    this.validatedRows.clear();
-
-    this.validationErrors = [];
-
-    this.rebuildColumns();
-
-    this.emitRecipients();
-
-    this.refreshGrid();
-
-    this.changeDetectorRef.detectChanges();
-
-  }
-
-
-  /* =======================================================
-     FILE IMPORT
-     ======================================================= */
-
-  onCsvSelected(
-    event: Event
-  ): void {
-
-    if (
-      this.isImportingCsv ||
-      this.isValidating
-    ) {
-
-      return;
-
-    }
-
-    const input =
-      event.target as HTMLInputElement;
-
-    const file =
-      input.files?.[0];
-
-    if (!file) {
-      return;
-    }
-
-    /*
-     * Validate supported file extension.
-     */
-    const extension =
-      this.getFileExtension(
-        file.name
-      );
-
-    const supportedExtensions =
-      new Set([
-        'csv',
-        'xls',
-        'xlsx'
-      ]);
-
-    if (
-      !supportedExtensions.has(
-        extension
-      )
-    ) {
-
-      alert(
-        'Please select a CSV, XLS, or XLSX file.'
-      );
-
-      input.value = '';
-
-      return;
-
-    }
-
-    console.log(
-      'Starting file import:',
-      file.name
-    );
-
-    this.isImportingCsv = true;
-
-    /*
-     * Force Angular to immediately render
-     * "Importing CSV..." before FileReader starts.
-     */
-    this.changeDetectorRef.detectChanges();
-
-    const reader =
-      new FileReader();
-
-
-    reader.onload = () => {
-
-      try {
-
-        const result =
-          reader.result;
-
-        if (!result) {
-
-          throw new Error(
-            'The selected file could not be read.'
-          );
-
-        }
-
-        /*
-         * XLSX.read accepts CSV, XLS and XLSX
-         * when given an ArrayBuffer.
-         */
-        const workbook =
-          XLSX.read(
-            result,
-            {
-              type: 'array'
-            }
-          );
-
-        if (
-          !workbook.SheetNames ||
-          workbook.SheetNames.length === 0
-        ) {
-
-          throw new Error(
-            'The file does not contain any worksheets.'
-          );
-
-        }
-
-        /*
-         * Use the first worksheet.
-         */
-        const worksheet =
-          workbook.Sheets[
-            workbook.SheetNames[0]
-          ];
-
-        if (!worksheet) {
-
-          throw new Error(
-            'The first worksheet could not be read.'
-          );
-
-        }
-
-        /*
-         * Convert worksheet to an array of
-         * arrays so we can build our own rows.
-         */
-        const data =
-          XLSX.utils.sheet_to_json<
-            (string | number | boolean | null)[]
-          >(
-            worksheet,
-            {
-              header: 1,
-              defval: ''
-            }
-          );
-
-        this.importTabularData(data);
-
-        console.log(
-          'File import completed:',
-          file.name
-        );
-
-      }
-      catch (error) {
-
-        console.error(
-          'File import failed:',
-          error
-        );
-
-        alert(
-          error instanceof Error
-            ? error.message
-            : 'The file could not be imported.'
-        );
-
-      }
-      finally {
-
-        this.isImportingCsv = false;
-
-        /*
-         * Immediately update the UI.
-         */
-        this.changeDetectorRef.detectChanges();
-
-      }
-
-    };
-
-
-    reader.onerror = () => {
-
-      console.error(
-        'Could not read file.'
-      );
-
-      this.isImportingCsv = false;
-
-      alert(
-        'The selected file could not be read.'
-      );
-
-      this.changeDetectorRef.detectChanges();
-
-    };
-
-
-    /*
-     * ArrayBuffer works for CSV, XLS and XLSX.
-     */
-    reader.readAsArrayBuffer(file);
-
-    /*
-     * Clear the input so selecting the same
-     * file again triggers change.
-     */
-    input.value = '';
-
-  }
-
-
-  /* =======================================================
-     TABULAR DATA IMPORT
-     * ======================================================= */
-
-  private importTabularData(
-    data:
-      (string | number | boolean | null)[][]
-  ): void {
-
-    if (
-      !data ||
-      data.length === 0
-    ) {
-
-      throw new Error(
-        'The selected file is empty.'
-      );
-
-    }
-
-    /*
-     * First row is the header.
-     */
-    const rawHeaders =
-      data[0] ?? [];
-
-    const headers =
-      rawHeaders.map(
-        (header, index) => {
-
-          const value =
-            String(
-              header ?? ''
-            ).trim();
-
-          /*
-           * Give unnamed columns a predictable name.
-           */
-          return value ||
-            `Column${index + 1}`;
-
-        }
-      );
-
-
-    /*
-     * Remove duplicate column names.
-     *
-     * Example:
-     *
-     * Email, Name, Email
-     *
-     * becomes:
-     *
-     * Email, Name, Email_2
-     */
-    const uniqueHeaders =
-      this.makeUniqueHeaders(
-        headers
-      );
-
-
-    const importedRows:
-      RecipientGridRow[] = [];
-
-
-    /*
-     * Every row after the header becomes
-     * one grid row.
-     */
-    for (
-      let index = 1;
-      index < data.length;
-      index++
-    ) {
-
-      const sourceRow =
-        data[index] ?? [];
-
-      /*
-       * Ignore completely empty rows.
-       */
-      const hasValue =
-        sourceRow.some(
-          value =>
-            String(
-              value ?? ''
-            ).trim() !== ''
-        );
-
-      if (!hasValue) {
-        continue;
-      }
-
-
-      const rowId =
-        index;
-
-
-      const row:
-        RecipientGridRow = {
-          rowId
-        };
-
-
-      uniqueHeaders.forEach(
-        (header, columnIndex) => {
-
-          const value =
-            sourceRow[columnIndex];
-
-          row[header] =
-            this.normalizeCellValue(
-              value
-            );
-
-        }
-      );
-
-
-      importedRows.push(row);
-
-    }
-
-
-    /*
-     * Replace the current grid data.
-     */
-    this.gridRows =
-      importedRows;
-
-
-    /*
-     * The imported headers become our columns.
-     */
-    this.emailColumns =
-      [...uniqueHeaders];
-
-
-    /*
-     * Importing new data invalidates all
-     * previous validation state.
-     */
-    this.validationState.clear();
-
-    this.validatedRows.clear();
-
-    this.validationErrors = [];
-
-
-    /*
-     * Rebuild the grid structure.
-     */
-    this.rebuildColumns();
-
-
-    /*
-     * Notify parent.
-     */
-    this.emitRecipients();
-
-
-    /*
-     * Refresh AG Grid.
-     */
-    this.refreshGrid();
-
-
-    /*
-     * Explicitly trigger Angular rendering.
-     */
-    this.changeDetectorRef.detectChanges();
-
-  }
-
-
-  /* =======================================================
-     UNIQUE HEADERS
-     * ======================================================= */
-
-  private makeUniqueHeaders(
-    headers: string[]
-  ): string[] {
-
-    const counts =
-      new Map<string, number>();
-
-    return headers.map(
-      header => {
-
-        const existingCount =
-          counts.get(header) ?? 0;
-
-        counts.set(
-          header,
-          existingCount + 1
-        );
-
-        if (existingCount === 0) {
-          return header;
-        }
-
-        return `${header}_${existingCount + 1}`;
-
-      }
-    );
-
-  }
-
-
-  /* =======================================================
-     CELL VALUE NORMALIZATION
-     * ======================================================= */
-
-  private normalizeCellValue(
-    value:
-      string | number | boolean | null | undefined
-  ): string {
-
-    if (
-      value === null ||
-      value === undefined
-    ) {
-
-      return '';
-
-    }
-
-    return String(value);
-
-  }
-
-
-  /* =======================================================
-     FILE EXTENSION
-     * ======================================================= */
-
-  private getFileExtension(
-    fileName: string
-  ): string {
-
-    const lastDot =
-      fileName.lastIndexOf('.');
-
-    if (lastDot === -1) {
-      return '';
-    }
-
-    return fileName
-      .substring(lastDot + 1)
-      .toLowerCase();
-
-  }
-
-
-  /* =======================================================
-     VALIDATION
-     * ======================================================= */
-
-  async validateRows(): Promise<void> {
-
-    if (
-      this.isValidating ||
-      this.isImportingCsv
-    ) {
-
-      return;
-
-    }
-
-    console.log(
-      'Validate Rows clicked'
-    );
-
-    this.isValidating = true;
-
-    /*
-     * Force Angular to immediately render
-     * "Validating...".
-     */
-    this.changeDetectorRef.detectChanges();
-
-
-    try {
-
-      /*
-       * Let the browser paint the loading bar.
-       */
-      await new Promise<void>(
-        resolve =>
-          setTimeout(
-            resolve,
-            50
-          )
-      );
-
-
-      console.log(
-        'Starting validation'
-      );
-
-
-      this.revalidateAllRows();
-
-
-      console.log(
-        'Validation finished'
-      );
-
-    }
-    catch (error) {
-
-      console.error(
-        'Validation failed:',
-        error
-      );
-
-    }
-    finally {
-
-      this.isValidating = false;
-
-      /*
-       * Immediately render the completed
-       * validation state.
-       */
-      this.changeDetectorRef.detectChanges();
-
-      console.log(
-        'Validation state reset'
-      );
-
-    }
-
-  }
-
-
-  /* =======================================================
-     VALIDATE ALL ROWS
-     * ======================================================= */
-
-  private revalidateAllRows(): void {
-
-    console.log(
-      'Validating rows:',
-      this.gridRows.length
-    );
-
-
-    /*
-     * First count email occurrences.
-     *
-     * This allows duplicate email errors
-     * to appear on EVERY affected row.
-     */
-    const emailCounts =
-      new Map<string, number>();
-
-
-    for (
-      const row of this.gridRows
-    ) {
-
-      const email =
-        this.getEmail(row)
-          .trim()
-          .toLowerCase();
-
-
-      if (!email) {
-        continue;
-      }
-
-
-      emailCounts.set(
-        email,
-        (emailCounts.get(email) ?? 0) + 1
-      );
-
-    }
-
-
-    /*
-     * Clear previous state.
-     *
-     * This ensures corrected rows become
-     * valid on the next validation.
-     */
-    this.validationState.clear();
-    this.validatedRows.clear();
-
-    this.validationErrors = [];
-
-
-    /*
-     * Validate every row.
-     */
-    for (
-      const row of this.gridRows
-    ) {
-
-      this.validatedRows.add(row.rowId);
-
-      const errors =
-        this.validateRow(
-          row,
-          emailCounts
-        );
-
-      this.validatedRows.add(row.rowId);
-
-
-      if (
-        errors.length === 0
-      ) {
-
-        continue;
-
-      }
-
-
-      this.validationState.set(
-        row.rowId,
-        errors
-      );
-
-
-      this.validationErrors.push({
-
-        rowId:
-          row.rowId,
-
-        errors
-
-      });
-
-    }
-
-
-    console.log(
-      'Validation state:',
-      this.validationState
-    );
-
-
-    console.log(
-      'Validation errors:',
-      this.validationErrors
-    );
-
-
-    /*
-     * Only refresh the existing grid.
-     *
-     * IMPORTANT:
-     * Do NOT call rebuildColumns() here.
-     */
-    this.refreshGrid(true);
-
-
-    /*
-     * Force Angular to update summary values
-     * and other template state.
-     */
-    this.changeDetectorRef.detectChanges();
-
-  }
-
-
-  /* =======================================================
-     VALIDATE ONE ROW
-     * ======================================================= */
-
-  private validateSingleRow(
-    row: RecipientGridRow
-  ): boolean {
-
-    const emailCounts =
-      new Map<string, number>();
-
-
-    /*
-     * Duplicate validation is cross-row,
-     * so we must count every row even when
-     * validating only one row.
-     */
-    for (
-      const currentRow of this.gridRows
-    ) {
-
-      const email =
-        this.getEmail(currentRow)
-          .trim()
-          .toLowerCase();
-
-
-      if (!email) {
-        continue;
-      }
-
-
-      emailCounts.set(
-        email,
-        (emailCounts.get(email) ?? 0) + 1
-      );
-
-    }
-
-
-    const errors =
-      this.validateRow(
-        row,
-        emailCounts
-      );
-
-
-    this.validatedRows.add(row.rowId);
-
-    if (
-      errors.length === 0
-    ) {
-
-      this.validationState.delete(
-        row.rowId
-      );
-
-      return true;
-
-    }
-
-
-    this.validationState.set(
-      row.rowId,
-      errors
-    );
-
-    return false;
-
-  }
-
-
-  /* =======================================================
-     VALIDATE ROW
-     * ======================================================= */
-
-  private validateRow(
-    row: RecipientGridRow,
-    emailCounts: Map<string, number>
-  ): string[] {
-
-    const errors: string[] = [];
-
-
-    const dataColumns =
-      this.getDataColumns();
-
-
-    /*
-     * Every data column is required.
-     */
-    for (
-      const column of dataColumns
-    ) {
-
-      const value =
-        String(
-          row[column] ?? ''
-        ).trim();
-
-
-      if (!value) {
-
-        errors.push(
-          `${column} is required.`
-        );
-
-      }
-
-    }
-
-
-    /*
-     * Email validation.
-     */
-    const email =
-      this.getEmail(row)
-        .trim();
-
-
-    if (email) {
-
-      const emailRegex =
-        /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-
-      if (
-        !emailRegex.test(email)
-      ) {
-
-        errors.push(
-          'Invalid email address.'
-        );
-
-      }
-
-
-      /*
-       * Duplicate email validation.
-       */
-      if (
-        (
-          emailCounts.get(
-            email.toLowerCase()
-          ) ?? 0
-        ) > 1
-      ) {
-
-        errors.push(
-          'Duplicate email address.'
-        );
-
-      }
-
-    }
-
-
-    return errors;
-
-  }
-
-
-  /* =======================================================
-     PREVIEW
-     * ======================================================= */
-
-  previewFirstRow(): void {
-
-    const row =
-      this.gridRows[0];
-
-
-    if (!row) {
-      return;
-    }
-
-
-    /*
-     * Safety validation before preview.
-     */
-    if (
-      !this.validateSingleRow(row)
-    ) {
-
-      this.refreshGrid();
-
-      this.changeDetectorRef.detectChanges();
-
-      return;
-
-    }
-
-
-    this.refreshGrid();
-
-    this.changeDetectorRef.detectChanges();
-
-
-    console.log(
-      'Preview row:',
-      row
-    );
-
-  }
-
-
-  /* =======================================================
-     GET EMAIL
-     * ======================================================= */
-
-  private getEmail(
-    row: RecipientGridRow
-  ): string {
-
-    const emailColumn =
-      Object.keys(row).find(
-        key =>
-          key.toLowerCase() === 'email'
-      );
-
-
-    if (!emailColumn) {
-      return '';
-    }
-
-
-    return String(
-      row[emailColumn] ?? ''
-    );
-
-  }
-
-
-  /* =======================================================
-     NEXT ROW ID
-     * ======================================================= */
 
   private getNextRowId(): number {
 
@@ -1576,155 +661,828 @@ export class RecipientInput {
 
     return Math.max(
       ...this.gridRows.map(
-        row => row.rowId
+        row =>
+          row.rowId
       )
     ) + 1;
 
   }
 
 
-  private gridRowToRecipient(
-    row: RecipientGridRow
-  ): Recipient {
-    const values: Record<string, string> = {};
-
-    for (const column of this.getDataColumns()) {
-      values[column] = String(row[column] ?? '');
-    }
-
-    return {
-      rowId: row.rowId,
-      values
-    };
-  }
-
-
   /* =======================================================
-     EMIT RECIPIENTS
-     * ======================================================= */
+     REMOVE ROW
+     ======================================================= */
 
-  private emitRecipients(): void {
-    const recipients = this.gridRows.map(
-      row => this.gridRowToRecipient(row)
+  private removeRow(
+    rowId: number
+  ): void {
+
+    this.gridRows =
+      this.gridRows.filter(
+        row =>
+          row.rowId !== rowId
+      );
+
+
+    this.validationState.delete(
+      rowId
     );
 
-    this.recipientsChanged.emit(recipients);
+    this.validatedRows.delete(
+      rowId
+    );
+
+
+    this.validationErrors =
+      this.validationErrors.filter(
+        error =>
+          error.rowId !== rowId
+      );
+
+
+    this.refreshGrid(
+      true
+    );
+
+
+    this.emitRecipients();
+
   }
 
 
   /* =======================================================
-     GRID REFRESH
-     * ======================================================= */
+     ACTION COLUMN
+     ======================================================= */
 
-  private refreshGrid(replaceRowData = false): void {
+  private createActionColumn():
+    ColDef<RecipientGridRow> {
 
-    if (!this.gridApi) {
+    return {
+
+      colId: 'actions',
+
+      headerName: 'Actions',
+
+      width: 100,
+
+      editable: false,
+
+      sortable: false,
+
+      filter: false,
+
+      pinned: 'right',
+
+      cellRenderer:
+        (
+          params:
+            ICellRendererParams<RecipientGridRow>
+        ) => {
+
+          const button =
+            document.createElement(
+              'button'
+            );
+
+          button.type =
+            'button';
+
+          button.textContent =
+            'Delete';
+
+          button.className =
+            'delete-row-button';
+
+
+          button.addEventListener(
+            'click',
+            () => {
+
+              if (!params.data) {
+                return;
+              }
+
+              this.removeRow(
+                params.data.rowId
+              );
+
+            }
+          );
+
+
+          return button;
+
+        }
+
+    };
+
+  }
+
+
+  /* =======================================================
+     GRID EVENTS
+     ======================================================= */
+
+  onCellValueChanged(
+    event: CellValueChangedEvent<RecipientGridRow>
+  ): void {
+
+    if (!event.data) {
       return;
     }
 
+
     /*
-     * validationState and validatedRows live outside AG Grid's
-     * rowData. A normal refreshCells() can leave a function-based
-     * cell renderer displaying its previous result until another
-     * grid interaction occurs.
-     *
-     * When validation has just completed, replace rowData with a
-     * new array and new row objects. This gives AG Grid an explicit
-     * data change and forces the validation cells to render from the
-     * current validation state immediately.
+     * Editing a cell invalidates the previous
+     * validation result for that row.
      */
-    if (replaceRowData) {
-      const selectedIds = new Set(
-        this.gridApi
-          .getSelectedRows()
-          .map(row => row.rowId)
+    this.validationState.delete(
+      event.data.rowId
+    );
+
+    this.validatedRows.delete(
+      event.data.rowId
+    );
+
+
+    this.validationErrors =
+      this.validationErrors.filter(
+        error =>
+          error.rowId !==
+          event.data!.rowId
       );
 
-      this.gridApi.setGridOption(
-        'rowData',
-        this.gridRows.map(row => ({ ...row }))
-      );
 
-      this.gridApi.forEachNode(node => {
-        if (node.data) {
-          node.setSelected(
-            selectedIds.has(node.data.rowId)
-          );
-        }
-      });
-    }
+    this.refreshGrid(
+      true
+    );
 
-    this.gridApi.refreshCells({
-      columns: ['validation'],
-      force: true
-    });
 
-    this.gridApi.redrawRows();
+    this.emitRecipients();
+
+  }
+
+
+  onSelectionChanged(): void {
 
     this.emitSelectedRecipients();
 
   }
 
+
   /* =======================================================
-     HTML ESCAPING
-     * ======================================================= */
+     RECIPIENT OUTPUT
+     ======================================================= */
+
+  private emitRecipients(): void {
+
+    const recipients =
+      this.gridRows.map(
+        row =>
+          this.toRecipient(row)
+      );
+
+
+    this.recipientsChanged.emit(
+      recipients
+    );
+
+  }
+
+
+  private emitSelectedRecipients(): void {
+
+    if (!this.gridApi) {
+      return;
+    }
+
+
+    const selectedRows =
+      this.gridApi.getSelectedRows();
+
+
+    const recipients =
+      selectedRows.map(
+        row =>
+          this.toRecipient(row)
+      );
+
+
+    this.selectedRecipientsChanged.emit(
+      recipients
+    );
+
+  }
+
+
+  private toRecipient(
+    row: RecipientGridRow
+  ): Recipient {
+
+    const values:
+      Record<string, string> = {};
+
+
+    for (
+      const column
+      of this.getDataColumns()
+    ) {
+
+      values[column] =
+        String(
+          row[column] ?? ''
+        );
+
+    }
+
+
+    return {
+
+      rowId:
+        row.rowId,
+
+      values
+
+    };
+
+  }
+
+
+  /* =======================================================
+     PREVIEW
+     ======================================================= */
+
+  previewFirstRow(): void {
+
+    const selectedRows =
+      this.gridApi?.getSelectedRows() ?? [];
+
+
+    const row =
+      selectedRows.length > 0
+        ? selectedRows[0]
+        : this.gridRows[0];
+
+
+    if (!row) {
+
+      alert(
+        'There are no recipient rows to preview.'
+      );
+
+      return;
+
+    }
+
+
+    this.previewRequested.emit(
+      this.toRecipient(row)
+    );
+
+  }
+
+
+  /* =======================================================
+     VALIDATION
+     ======================================================= */
+
+  async validateRows(): Promise<void> {
+
+    if (this.isValidating) {
+      return;
+    }
+
+
+    this.isValidating =
+      true;
+
+
+    /*
+     * Existing row validation logic should
+     * populate validationState and validationErrors.
+     *
+     * This method deliberately remains explicit;
+     * validation is not performed while typing.
+     */
+    try {
+
+      this.validationState.clear();
+
+      this.validatedRows.clear();
+
+      this.validationErrors = [];
+
+
+      for (
+        const row
+        of this.gridRows
+      ) {
+
+        const errors:
+          string[] = [];
+
+
+        for (
+          const column
+          of this.getDataColumns()
+        ) {
+
+          const value =
+            String(
+              row[column] ?? ''
+            ).trim();
+
+
+          if (!value) {
+
+            errors.push(
+              `${column} is required.`
+            );
+
+          }
+
+        }
+
+
+        this.validatedRows.add(
+          row.rowId
+        );
+
+
+        this.validationState.set(
+          row.rowId,
+          errors
+        );
+
+
+        if (
+          errors.length > 0
+        ) {
+
+          this.validationErrors.push({
+
+            rowId:
+              row.rowId,
+
+            errors
+
+          });
+
+        }
+
+      }
+
+
+      this.refreshGrid(
+        true
+      );
+
+    }
+    finally {
+
+      this.isValidating =
+        false;
+
+    }
+
+  }
+
+
+  private createValidationColumn():
+    ColDef<RecipientGridRow> {
+
+    return {
+
+      colId: 'validation',
+
+      headerName: 'Validation',
+
+      width: 120,
+
+      editable: false,
+
+      sortable: false,
+
+      filter: false,
+
+      pinned: 'left',
+
+      valueGetter: params => {
+
+        if (!params.data) {
+          return '';
+        }
+
+
+        const errors =
+          this.validationState.get(
+            params.data.rowId
+          );
+
+
+        if (
+          !errors ||
+          errors.length === 0
+        ) {
+
+          return '';
+
+        }
+
+
+        return `${errors.length} error(s)`;
+
+      },
+
+      cellRenderer:
+        (
+          params:
+            ICellRendererParams<RecipientGridRow>
+        ) => {
+
+          if (!params.data) {
+            return '';
+          }
+
+
+          const errors =
+            this.validationState.get(
+              params.data.rowId
+            );
+
+
+          if (
+            !errors ||
+            errors.length === 0
+          ) {
+
+            return '';
+
+          }
+
+
+          return `
+            <div
+              class="validation-error-cell"
+              title="${this.escapeHtml(errors.join('\n'))}">
+
+              <span>
+                ⚠
+              </span>
+
+              <span>
+                ${errors.length} error(s)
+              </span>
+
+            </div>
+          `;
+
+        }
+
+    };
+
+  }
+
+
+  /* =======================================================
+     GRID REFRESH
+     ======================================================= */
+
+  private refreshGrid(
+    replaceRowData = false
+  ): void {
+
+    if (!this.gridApi) {
+      return;
+    }
+
+
+    if (
+      replaceRowData
+    ) {
+
+      /*
+       * Create new row objects so AG Grid receives
+       * a new rowData reference while preserving
+       * stable row identity through getRowId().
+       */
+      this.gridRows =
+        this.gridRows.map(
+          row => ({
+            ...row
+          })
+        );
+
+
+      this.gridApi.setGridOption(
+        'rowData',
+        this.gridRows
+      );
+
+    }
+
+
+    this.gridApi.refreshCells({
+
+      columns: [
+        'validation'
+      ],
+
+      force: true
+
+    });
+
+
+    this.gridApi.redrawRows();
+
+
+    this.emitSelectedRecipients();
+
+
+    this.changeDetectorRef.detectChanges();
+
+  }
+
+
+  /* =======================================================
+     FILE IMPORT
+     ======================================================= */
+
+  onCsvSelected(
+    event: Event
+  ): void {
+
+    const input =
+      event.target as HTMLInputElement;
+
+
+    const file =
+      input.files?.[0];
+
+
+    if (!file) {
+      return;
+    }
+
+
+    this.isImportingCsv =
+      true;
+
+
+    const reader =
+      new FileReader();
+
+
+    reader.onload =
+      () => {
+
+        try {
+
+          const data =
+            reader.result;
+
+
+          if (!data) {
+            return;
+          }
+
+
+          const workbook =
+            XLSX.read(
+              data,
+              {
+                type: 'array'
+              }
+            );
+
+
+          const firstSheet =
+            workbook.Sheets[
+              workbook.SheetNames[0]
+            ];
+
+
+          if (!firstSheet) {
+
+            alert(
+              'The imported file does not contain a worksheet.'
+            );
+
+            return;
+
+          }
+
+
+          const rows =
+            XLSX.utils.sheet_to_json<
+              Record<string, unknown>
+            >(
+              firstSheet,
+              {
+                defval: ''
+              }
+            );
+
+
+          if (
+            rows.length === 0
+          ) {
+
+            alert(
+              'The imported file does not contain any rows.'
+            );
+
+            return;
+
+          }
+
+
+          const headers =
+            this.getImportedHeaders(
+              rows
+            );
+
+
+          if (
+            headers.length === 0
+          ) {
+
+            alert(
+              'The imported file does not contain any columns.'
+            );
+
+            return;
+
+          }
+
+
+          this.gridRows =
+            rows.map(
+              (sourceRow, index) => {
+
+                const row:
+                  RecipientGridRow = {
+
+                  rowId:
+                    index + 1
+
+                };
+
+
+                for (
+                  const header
+                  of headers
+                ) {
+
+                  row[header] =
+                    String(
+                      sourceRow[header] ?? ''
+                    );
+
+                }
+
+
+                return row;
+
+              }
+            );
+
+
+          this.validationState.clear();
+
+          this.validatedRows.clear();
+
+          this.validationErrors = [];
+
+
+          this.rebuildColumns();
+
+
+          this.refreshGrid(
+            true
+          );
+
+
+          this.emitRecipients();
+
+        }
+        catch (error) {
+
+          console.error(
+            'IMPORT ERROR:',
+            error
+          );
+
+          alert(
+            'Unable to import the selected file.'
+          );
+
+        }
+        finally {
+
+          this.isImportingCsv =
+            false;
+
+          input.value =
+            '';
+
+        }
+
+      };
+
+
+    reader.onerror =
+      () => {
+
+        this.isImportingCsv =
+          false;
+
+        input.value =
+          '';
+
+        alert(
+          'Unable to read the selected file.'
+        );
+
+      };
+
+
+    reader.readAsArrayBuffer(
+      file
+    );
+
+  }
+
+
+  private getImportedHeaders(
+    rows: Record<string, unknown>[]
+  ): string[] {
+
+    const headers =
+      new Set<string>();
+
+
+    for (
+      const row
+      of rows
+    ) {
+
+      for (
+        const key
+        of Object.keys(row)
+      ) {
+
+        if (
+          key.trim()
+        ) {
+
+          headers.add(
+            key.trim()
+          );
+
+        }
+
+      }
+
+    }
+
+
+    return [
+      ...headers
+    ];
+
+  }
+
+
+  /* =======================================================
+     HTML SAFETY
+     ======================================================= */
 
   private escapeHtml(
     value: string
   ): string {
 
     return value
-
       .replace(
         /&/g,
         '&amp;'
       )
-
       .replace(
         /</g,
         '&lt;'
       )
-
       .replace(
         />/g,
         '&gt;'
       )
-
       .replace(
         /"/g,
         '&quot;'
       )
-
       .replace(
         /'/g,
         '&#039;'
       );
-
-  }
-
-
-  /* =======================================================
-     VALID / INVALID COUNTS
-     * ======================================================= */
-
-  get validRowCount(): number {
-
-    return this.gridRows.filter(
-      row =>
-        this.validatedRows.has(row.rowId) &&
-        !this.validationState.has(row.rowId)
-    ).length;
-
-  }
-
-
-  get invalidRowCount(): number {
-
-    return this.gridRows.filter(
-      row =>
-        this.validatedRows.has(row.rowId) &&
-        this.validationState.has(row.rowId)
-    ).length;
 
   }
 

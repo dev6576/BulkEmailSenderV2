@@ -5,37 +5,55 @@
   min-height: 0;
 }
 
+
 .send-page {
   width: 100%;
-  height: 100%;
-  min-height: 0;
+  min-height: 100%;
 
   display: flex;
   flex-direction: column;
 
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+
   box-sizing: border-box;
 }
 
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
 .send-header {
   flex: 0 0 auto;
+
   padding: 20px 24px 12px;
 }
 
+
 .send-header h1 {
   margin: 0;
+
   font-size: 24px;
 }
 
+
+/* =========================================================
+   TABS
+   ========================================================= */
+
 .send-tabs {
   display: flex;
+
   flex: 0 0 auto;
 
   gap: 4px;
+
   padding: 0 24px;
 
   border-bottom: 1px solid #ddd;
 }
+
 
 .send-tab {
   padding: 10px 18px;
@@ -44,6 +62,7 @@
   border-bottom: 2px solid transparent;
 
   background: transparent;
+
   color: #666;
 
   cursor: pointer;
@@ -52,22 +71,28 @@
   font-weight: 500;
 }
 
+
 .send-tab:hover {
   color: #222;
+
   background: #f7f7f7;
 }
 
+
 .send-tab.active {
   color: #111;
+
   border-bottom-color: #222;
 }
 
+
 /* =========================================================
-   MAIN WORKSPACE
+   WORKSPACE
    ========================================================= */
 
 .send-workspace {
   flex: 1 1 0;
+
   min-height: 0;
 
   display: flex;
@@ -76,8 +101,10 @@
   padding: 16px 24px;
 
   overflow: hidden;
+
   box-sizing: border-box;
 }
+
 
 .tab-panel {
   flex: 1 1 0;
@@ -89,17 +116,226 @@
   box-sizing: border-box;
 }
 
+
 .data-panel {
   display: flex;
   flex-direction: column;
 
   min-height: 0;
+
   overflow: hidden;
 }
+
+
+.data-panel app-recipient-input {
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  min-height: 0;
+}
+
 
 .template-panel {
   overflow: auto;
 }
+
+
+/* =========================================================
+   SEND ACTION BAR
+   ========================================================= */
+
+.send-action-bar {
+  flex: 0 0 auto;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 16px;
+
+  margin-bottom: 10px;
+
+  padding: 10px 12px;
+
+  border: 1px solid #ddd;
+
+  border-radius: 6px;
+
+  background: #fff;
+
+  box-sizing: border-box;
+}
+
+
+.send-action-info {
+  display: flex;
+
+  align-items: baseline;
+
+  gap: 6px;
+
+  color: #666;
+
+  font-size: 13px;
+}
+
+
+.send-action-info strong {
+  color: #111;
+
+  font-size: 15px;
+}
+
+
+/* =========================================================
+   SEND BUTTON
+   ========================================================= */
+
+.send-button {
+  flex: 0 0 auto;
+
+  min-width: 110px;
+
+  padding: 9px 16px;
+
+  border: 1px solid #222;
+
+  border-radius: 6px;
+
+  background: #222;
+
+  color: #fff;
+
+  cursor: pointer;
+
+  font: inherit;
+
+  font-size: 14px;
+
+  font-weight: 600;
+}
+
+
+.send-button:hover:not(:disabled) {
+  background: #000;
+}
+
+
+.send-button:disabled {
+  border-color: #ccc;
+
+  background: #e5e5e5;
+
+  color: #888;
+
+  cursor: not-allowed;
+}
+
+
+/* =========================================================
+   SEND ERROR
+   ========================================================= */
+.send-error {
+  flex: 0 0 auto;
+
+  margin-bottom: 10px;
+
+  padding: 9px 12px;
+
+  border: 1px solid #f0b7b1;
+
+  border-radius: 6px;
+
+  background: #fff5f3;
+
+  color: #b42318;
+
+  font-size: 13px;
+
+  line-height: 1.4;
+}
+
+/* =========================================================
+   SEND PROGRESS
+   ========================================================= */
+
+.send-progress-panel {
+  flex: 0 0 auto;
+
+  margin-bottom: 10px;
+
+  padding: 10px 12px;
+
+  border: 1px solid #ddd;
+
+  border-radius: 6px;
+
+  background: #fafafa;
+
+  box-sizing: border-box;
+}
+
+
+.send-progress-header {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 12px;
+
+  margin-bottom: 7px;
+
+  color: #555;
+
+  font-size: 12px;
+}
+
+
+.send-progress-header > div {
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  min-width: 0;
+}
+
+
+.send-progress-header strong {
+  color: #222;
+}
+
+
+.send-progress {
+  width: 100%;
+
+  height: 5px;
+
+  overflow: hidden;
+
+  border-radius: 3px;
+
+  background: #e5e7eb;
+}
+
+
+.send-progress-bar {
+  height: 100%;
+
+  border-radius: 3px;
+
+  background: #222;
+
+  transition: width 0.2s ease;
+}
+
 
 /* =========================================================
    EMAIL EDITOR
@@ -109,28 +345,38 @@
   max-width: 900px;
 }
 
+
 .section-heading {
   margin-bottom: 20px;
 }
+
 
 .section-heading h2 {
   margin: 0 0 4px;
 }
 
+
 .section-heading p {
   margin: 0;
+
   color: #666;
 }
 
+
 .email-editor form {
   display: flex;
+
   flex-direction: column;
+
   gap: 8px;
 }
 
+
 .email-editor label {
   display: flex;
+
   flex-direction: column;
+
   gap: 6px;
 
   margin-top: 8px;
@@ -138,21 +384,26 @@
   font-weight: 500;
 }
 
+
 .email-editor input,
 .email-editor textarea {
   width: 100%;
+
   box-sizing: border-box;
 
   padding: 10px 12px;
 
   border: 1px solid #ccc;
+
   border-radius: 6px;
 
   font: inherit;
+
   font-weight: 400;
 
   resize: vertical;
 }
+
 
 .email-editor input:focus,
 .email-editor textarea:focus {
@@ -164,12 +415,75 @@
     0 0 0 2px rgba(0, 0, 0, 0.08);
 }
 
+
+/* =========================================================
+   TEMPLATE HELP
+   ========================================================= */
+
+.template-help {
+  margin-top: 16px;
+
+  padding: 12px 14px;
+
+  border: 1px solid #ddd;
+
+  border-radius: 6px;
+
+  background: #fafafa;
+
+  color: #555;
+
+  font-size: 13px;
+
+  line-height: 1.5;
+}
+
+
+.template-help strong {
+  display: block;
+
+  margin-bottom: 4px;
+
+  color: #222;
+}
+
+
+.template-help p {
+  margin: 4px 0;
+}
+
+
+code {
+  padding: 1px 4px;
+
+  border-radius: 3px;
+
+  background: #eee;
+
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    monospace;
+
+  font-size: 12px;
+}
+
+
+/* =========================================================
+   VALIDATION
+   ========================================================= */
+
 .validation-error {
   margin-top: 4px;
 
   color: #b42318;
+
   font-size: 13px;
 }
+
 
 /* =========================================================
    PREVIEW DOCK
@@ -187,18 +501,23 @@
 
   background: #fafafa;
 
-  transition: flex-basis 0.18s ease;
+  transition:
+    flex-basis 0.18s ease;
 }
+
 
 .preview-dock.collapsed {
   flex-basis: 44px;
 }
 
+
 .preview-dock-header {
   flex: 0 0 44px;
 
   display: flex;
+
   align-items: center;
+
   justify-content: space-between;
 
   box-sizing: border-box;
@@ -210,17 +529,22 @@
   background: #fff;
 }
 
+
 .preview-dock-title {
   display: flex;
+
   align-items: center;
 
   min-width: 0;
 }
 
+
 .preview-dock-header h2 {
   margin: 0;
+
   font-size: 16px;
 }
+
 
 .preview-recipient {
   margin-left: 10px;
@@ -228,11 +552,14 @@
   overflow: hidden;
 
   color: #666;
+
   font-size: 13px;
 
   text-overflow: ellipsis;
+
   white-space: nowrap;
 }
+
 
 .preview-toggle-button {
   width: 28px;
@@ -243,20 +570,25 @@
   padding: 0;
 
   border: 1px solid #ccc;
+
   border-radius: 5px;
 
   background: #fff;
+
   color: #333;
 
   cursor: pointer;
 
   font-size: 18px;
+
   line-height: 1;
 }
+
 
 .preview-toggle-button:hover {
   background: #f2f2f2;
 }
+
 
 .preview-dock-content {
   flex: 1 1 0;
@@ -268,18 +600,24 @@
   padding: 12px 24px;
 }
 
+
 .preview-empty {
   color: #777;
+
   font-size: 13px;
 }
+
 
 .preview-loading {
   color: #555;
+
   font-size: 13px;
 }
 
+
 .preview-progress {
   width: 100%;
+
   height: 4px;
 
   margin-top: 8px;
@@ -291,18 +629,24 @@
   background: #e5e7eb;
 }
 
+
 .preview-progress-bar {
   width: 35%;
+
   height: 100%;
 
   border-radius: 2px;
 
   background: #222;
 
-  animation: preview-progress-animation 1s ease-in-out infinite;
+  animation:
+    preview-progress-animation
+    1s ease-in-out infinite;
 }
 
+
 @keyframes preview-progress-animation {
+
   0% {
     transform: translateX(-120%);
   }
@@ -314,16 +658,21 @@
   100% {
     transform: translateX(300%);
   }
+
 }
+
 
 .preview-error {
   color: #b42318;
 }
 
+
 .preview-result h3 {
   margin: 0 0 8px;
+
   font-size: 15px;
 }
+
 
 .preview-result pre {
   margin: 0;
@@ -335,38 +684,64 @@
   white-space: pre-wrap;
 
   border: 1px solid #ddd;
+
   border-radius: 6px;
 
   background: #fff;
 
   font-family: inherit;
+
   font-size: 13px;
+
   line-height: 1.5;
 }
+
+
+/* =========================================================
+   HIDDEN TAB
+   ========================================================= */
+
+.tab-panel-hidden {
+  display: none !important;
+}
+
 
 /* =========================================================
    RESPONSIVE
    ========================================================= */
 
 @media (max-width: 700px) {
+
   .send-header,
   .send-workspace,
   .send-tabs,
   .preview-dock-header,
   .preview-dock-content {
     padding-left: 14px;
+
     padding-right: 14px;
   }
+
+
+  .send-action-bar {
+    align-items: stretch;
+
+    flex-direction: column;
+  }
+
+
+  .send-button {
+    width: 100%;
+  }
+
 
   .preview-dock {
     flex-basis: 200px;
   }
 
+
   .preview-dock.collapsed {
     flex-basis: 44px;
   }
-}
 
-.tab-panel-hidden {
-  display: none !important;
 }
