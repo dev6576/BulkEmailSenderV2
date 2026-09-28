@@ -376,64 +376,86 @@ export class RecipientInput {
      SEND STATUS REFRESH
      ======================================================= */
 
-  refreshSendStatusCells(
-    sendRowEvents: Map<number, SendEvent>
-  ): void {
+ refreshSendStatusCells(
+  sendRowEvents: Map<number, SendEvent>
+): void {
 
-    /*
-     * IMPORTANT:
-     *
-     * The parent updates its signal and then immediately
-     * calls this method.
-     *
-     * Angular may not have propagated the new @Input()
-     * value into this component yet.
-     *
-     * Therefore we explicitly assign the Map here.
-     */
-    this.sendRowEvents =
-      sendRowEvents;
+  /*
+   * Store the latest send-event map locally.
+   */
+  this.sendRowEvents =
+    sendRowEvents;
 
 
-    console.log(
-      'refreshSendStatusCells map:',
-      [...sendRowEvents.entries()]
+  console.log(
+    'Refreshing send status cells:',
+    [...sendRowEvents.entries()]
+  );
+
+
+  if (!this.gridApi) {
+    console.warn(
+      'Cannot refresh send status: gridApi is not available.'
     );
 
-
-    if (!this.gridApi) {
-      return;
-    }
-
-
-    /*
-     * Force AG Grid to re-evaluate the external
-     * send-status state.
-     */
-    this.gridApi.refreshCells({
-
-      columns: [
-        'sendStatus'
-      ],
-
-      force: true
-
-    });
-
-
-    /*
-     * Force the row renderers to execute again.
-     */
-    this.gridApi.redrawRows();
-
-
-    /*
-     * Ensure Angular updates the component view.
-     */
-    this.changeDetectorRef.detectChanges();
-
+    return;
   }
 
+
+  /*
+   * IMPORTANT:
+   *
+   * Send status is stored outside AG Grid's rowData.
+   *
+   * Therefore we explicitly replace each row's data
+   * object. This forces AG Grid to perform the same
+   * kind of row refresh that happens when a cell is
+   * edited and Enter is pressed.
+   */
+  this.gridApi.forEachNode(
+    node => {
+
+      if (!node.data) {
+        return;
+      }
+
+
+      node.setData({
+        ...node.data
+      });
+
+    }
+  );
+
+
+  /*
+   * Now force the send-status column to re-evaluate
+   * its valueGetter/cellRenderer.
+   */
+  this.gridApi.refreshCells({
+
+    columns: [
+      'sendStatus'
+    ],
+
+    force: true
+
+  });
+
+
+  /*
+   * Redraw the rows as a final guarantee that the
+   * function-based cellRenderer executes again.
+   */
+  this.gridApi.redrawRows();
+
+
+  /*
+   * Make Angular process the updated component state.
+   */
+  this.changeDetectorRef.detectChanges();
+
+}
 
   /* =======================================================
      COLUMN HELPERS
