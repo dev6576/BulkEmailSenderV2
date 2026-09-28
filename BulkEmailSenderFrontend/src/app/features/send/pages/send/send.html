@@ -4,11 +4,6 @@
     <h1>Send Emails</h1>
   </header>
 
-
-  <!-- =====================================================
-       TABS
-       ===================================================== -->
-
   <nav
     class="send-tabs"
     aria-label="Send email sections">
@@ -18,69 +13,36 @@
       class="send-tab"
       [class.active]="activeTab() === 'data'"
       (click)="selectTab('data')">
-
       Data
-
     </button>
-
 
     <button
       type="button"
       class="send-tab"
       [class.active]="activeTab() === 'template'"
       (click)="selectTab('template')">
-
       Email Template
-
     </button>
-
   </nav>
-
-
-  <!-- =====================================================
-       WORKSPACE
-       ===================================================== -->
 
   <main class="send-workspace">
     @if (sendError()) {
-
-  <div
-    class="send-error"
-    role="alert">
-
-    {{ sendError() }}
-
-  </div>
-
-}
-
-    <!-- ===================================================
-         DATA TAB
-         =================================================== -->
+      <div class="send-error" role="alert">
+        {{ sendError() }}
+      </div>
+    }
 
     <section
       class="tab-panel data-panel"
       [class.tab-panel-hidden]="activeTab() !== 'data'">
 
-
-      <!-- ================================================
-           SEND ACTION BAR
-           ================================================ -->
-
       <div class="send-action-bar">
-
         <div class="send-action-info">
-
-          <strong>
-            {{ selectedRecipients.length }}
-          </strong>
-
+          <strong>{{ selectedRecipients.length }}</strong>
           <span>
             recipient{{ selectedRecipients.length === 1 ? '' : 's' }} selected
           </span>
-
         </div>
-
 
         <button
           type="button"
@@ -90,235 +52,165 @@
             selectedRecipients.length === 0
           "
           (click)="sendEmails()">
-
           @if (isSending()) {
             Sending...
           } @else {
             Send Emails
           }
-
         </button>
-
       </div>
 
-      <!-- ================================================
-           SEND PROGRESS
-           ================================================ -->
-
       @if (hasSendProgress) {
-
         <div class="send-progress-panel">
-
           <div class="send-progress-header">
-
             <div>
-
-              <strong>
-                {{ sendStatus() || 'Sending' }}
-              </strong>
-
+              <strong>{{ sendStatus() || 'Sending' }}</strong>
               @if (sendSummary) {
-
-                <span>
-                  {{ sendSummary }}
-                </span>
-
+                <span>{{ sendSummary }}</span>
               }
-
             </div>
-
-
-            <span>
-              {{ sendProgressPercentage }}%
-            </span>
-
+            <span>{{ sendProgressPercentage }}%</span>
           </div>
 
-
           <div class="send-progress">
-
             <div
               class="send-progress-bar"
               [style.width.%]="sendProgressPercentage">
             </div>
-
           </div>
-
         </div>
-
       }
 
-
-      <!-- ================================================
-           RECIPIENT GRID
-           ================================================ -->
-
       <app-recipient-input
-  [sendRowEvents]="sendRowEvents()"
-  (recipientsChanged)="onRecipientsChanged($event)"
-  (selectedRecipientsChanged)="onSelectedRecipientsChanged($event)"
-  (previewRequested)="previewRecipient($event)"
-/>
-
+        [sendRowEvents]="sendRowEvents()"
+        (recipientsChanged)="onRecipientsChanged($event)"
+        (selectedRecipientsChanged)="onSelectedRecipientsChanged($event)"
+        (previewRequested)="previewRecipient($event)"
+      />
     </section>
-
-
-    <!-- ===================================================
-         TEMPLATE TAB
-         =================================================== -->
 
     <section
       class="tab-panel template-panel"
       [class.tab-panel-hidden]="activeTab() !== 'template'">
 
-
       <div class="email-editor">
 
         <div class="section-heading">
-
-          <h2>
-            Email Template
-          </h2>
-
+          <h2>Email Template</h2>
           <p>
-            Use recipient column names as template placeholders.
-            For example:
-            <code>{{ '{{Name}}' }}</code>
+            Create a rich HTML email. Click a recipient field below to
+            insert it into the email, or type a field manually using:
+            <code>&#123;Name&#125;</code>
           </p>
-
         </div>
-
 
         <form [formGroup]="emailForm">
 
-
-          <!-- ============================================
-               SUBJECT
-               ============================================ -->
-
           <label>
-
-            <span>
-              Subject
-            </span>
-
+            <span>Subject</span>
             <input
               type="text"
               formControlName="subject" />
-
           </label>
-
 
           @if (
             emailForm.controls.subject.invalid &&
             emailForm.controls.subject.touched
           ) {
-
             <div class="validation-error">
-
               Subject is required.
-
             </div>
-
           }
 
+          <div class="email-body-label">
+            <span>Body</span>
 
-          <!-- ============================================
-               BODY
-               ============================================ -->
-
-          <label>
-
-            <span>
-              Body
-            </span>
-
-            <textarea
-              rows="14"
-              formControlName="body">
-            </textarea>
-
-          </label>
-
+            <quill-editor
+              formControlName="body"
+              format="html"
+              theme="snow"
+              [modules]="editorModules"
+              [sanitize]="true"
+              placeholder="Write your email..."
+              (onEditorCreated)="onEditorCreated($event)"
+              [styles]="{ height: '420px' }">
+            </quill-editor>
+          </div>
 
           @if (
             emailForm.controls.body.invalid &&
             emailForm.controls.body.touched
           ) {
-
             <div class="validation-error">
-
-              Body is required.
-
+              Email body is required.
             </div>
-
           }
-
-
-          <!-- ============================================
-               TEMPLATE RULE
-               ============================================ -->
 
           <div class="template-help">
 
-            <strong>
-              Template fields
-            </strong>
+            <div class="template-help-header">
+              <div>
+                <strong>Personalization</strong>
+                <p>
+                  Click a field to insert it at the current cursor position.
+                  Fields use the format <code>&#123;FieldName&#125;</code>.
+                </p>
+              </div>
+            </div>
 
-            <p>
-              Every
-              <code>{{ '{{FieldName}}' }}</code>
-              must exactly match a recipient column name.
-            </p>
+            @if (templateColumnNames.length > 0) {
+              <div
+                class="template-fields"
+                aria-label="Recipient fields">
 
-            <p>
-              Example:
-              <code>{{ '{{Name}}' }}</code>
-              is valid when the recipient data contains a
-              <code>Name</code> column.
+                @for (
+                  column of templateColumnNames;
+                  track column
+                ) {
+                  <button
+                    type="button"
+                    class="template-field"
+                    [title]="'Insert {' + column + '}'"
+                    (click)="insertTemplateField(column)">
+                    {{ '{' + column + '}' }}
+                  </button>
+                }
+
+              </div>
+            } @else {
+              <p class="template-fields-empty">
+                Add recipient data in the Data tab to see available fields here.
+              </p>
+            }
+
+            <p class="template-help-note">
+              Rich formatting, links, images, videos, tables, colors,
+              lists and alignment are preserved as HTML.
             </p>
 
           </div>
-
         </form>
-
       </div>
-
     </section>
-
   </main>
-
-
-  <!-- =====================================================
-       PREVIEW DOCK
-       ===================================================== -->
 
   <section
     class="preview-dock"
     [class.collapsed]="!isPreviewDockOpen()">
 
-
     <div class="preview-dock-header">
 
       <div class="preview-dock-title">
 
-        <h2>
-          Preview
-        </h2>
-
+        <h2>Preview</h2>
 
         @if (selectedRecipient) {
-
           <span class="preview-recipient">
-
             {{ selectedRecipient.values['Email'] }}
-
           </span>
-
         }
 
       </div>
-
 
       <button
         type="button"
@@ -330,22 +222,18 @@
             : 'Expand preview'
         "
         (click)="togglePreviewDock()">
-
         @if (isPreviewDockOpen()) {
           ⌄
         } @else {
           ⌃
         }
-
       </button>
 
     </div>
 
-
     @if (isPreviewDockOpen()) {
 
       <div class="preview-dock-content">
-
 
         @if (
           !selectedRecipient &&
@@ -353,102 +241,66 @@
           !previewError() &&
           !previewResponse()
         ) {
-
           <div class="preview-empty">
-
             Click Preview on a recipient row to render
             the email here.
-
           </div>
-
         }
-
 
         @if (isPreviewLoading()) {
-
           <div class="preview-loading">
-
             Generating preview...
-
             <div class="preview-progress">
-
               <div class="preview-progress-bar"></div>
-
             </div>
-
           </div>
-
         }
 
-
         @if (previewError()) {
-
           <div
             class="preview-error"
             role="alert">
-
             {{ previewError() }}
-
           </div>
-
         }
 
-
         @if (previewResponse()) {
-
 
           @if (
             previewResponse()!.isValid &&
             previewResponse()!.email
           ) {
-
             <div class="preview-result">
-
               <h3>
                 {{ previewResponse()!.email!.subject }}
               </h3>
 
-              <pre>
-{{ previewResponse()!.email!.htmlBody }}
-              </pre>
-
+              <div class="preview-email">
+                <div
+                  class="preview-email-content"
+                  [innerHTML]="previewResponse()!.email!.htmlBody">
+                </div>
+              </div>
             </div>
-
           }
 
-
           @if (!previewResponse()!.isValid) {
-
             <div class="preview-result">
-
-              <h3>
-                Preview validation failed
-              </h3>
-
+              <h3>Preview validation failed</h3>
 
               @for (
                 error of previewResponse()!.errors;
                 track $index
               ) {
-
                 <div class="validation-error">
-
                   {{ error.message }}
-
                 </div>
-
               }
-
             </div>
-
           }
-
         }
-
       </div>
-
     }
-
   </section>
 
 </section>

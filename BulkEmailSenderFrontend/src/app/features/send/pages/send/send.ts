@@ -18,6 +18,16 @@ import {
 } from '../../components/recipient-input/recipient-input';
 
 import {
+  QuillEditorComponent
+} from 'ngx-quill';
+
+import Quill from 'quill';
+
+import QuillTableBetter from 'quill-table-better';
+
+import QuillResize from 'quill-resize-module';
+
+import {
   SendApiService
 } from '../../services/send-api';
 
@@ -26,6 +36,19 @@ import {
   Recipient,
   SendEvent
 } from '../../models/send.models';
+
+
+Quill.register(
+  {
+    'modules/table-better': QuillTableBetter
+  },
+  true
+);
+
+Quill.register(
+  'modules/resize',
+  QuillResize
+);
 
 
 type SendTab =
@@ -38,7 +61,8 @@ type SendTab =
 
   imports: [
     ReactiveFormsModule,
-    RecipientInput
+    RecipientInput,
+    QuillEditorComponent
   ],
 
   templateUrl: './send.html',
@@ -51,8 +75,17 @@ export class Send {
     inject(SendApiService);
 
 
+  /*
+   * We use ViewChild only to trigger the existing
+   * recipient validation before sending.
+   *
+   * RecipientInput already exposes validateRows()
+   * and validationErrors.
+   */
   @ViewChild(RecipientInput)
   recipientInput?: RecipientInput;
+
+  private emailEditor?: Quill;
 
 
   /* =========================================================
@@ -121,9 +154,11 @@ export class Send {
 
 
   /*
-   * Row-level send events.
+   * Row-level send events are retained here.
    *
-   * The key is the stable recipient rowId.
+   * This gives us a central place to store the
+   * results even before we add visual status cells
+   * to RecipientInput.
    */
   sendRowEvents =
     signal<Map<number, SendEvent>>(
@@ -151,9 +186,9 @@ export class Send {
 
       body:
         new FormControl(
-          `Hello {Name},
-
-This is a test email.`,
+          `<p>Hello {Name},</p>
+<p>This is a <strong>test email</strong>.</p>
+<p><br></p>`,
           {
             nonNullable: true,
             validators: [
@@ -168,6 +203,258 @@ This is a test email.`,
         >([])
 
     });
+
+
+  readonly editorModules = {
+
+    toolbar: [
+      [
+        'bold',
+        'italic',
+        'underline',
+        'strike'
+      ],
+
+      [
+        { header: 1 },
+        { header: 2 },
+        { header: 3 }
+      ],
+
+      [
+        { list: 'ordered' },
+        { list: 'bullet' }
+      ],
+
+      [
+        { indent: '-1' },
+        { indent: '+1' }
+      ],
+
+      [
+        { align: [] }
+      ],
+
+      [
+        { color: [] },
+        { background: [] }
+      ],
+
+      [
+        {
+          size: [
+            'small',
+            false,
+            'large',
+            'huge'
+          ]
+        }
+      ],
+
+      [
+        'link',
+        'image',
+        'video'
+      ],
+
+      [
+        'clean'
+      ],
+
+      [
+        'table-better'
+      ]
+    ],
+
+    table: false,
+
+    'table-better': {
+      language: 'en_US',
+      menus: [
+        'column',
+        'row',
+        'merge',
+        'table',
+        'cell',
+        'wrap',
+        'copy',
+        'delete'
+      ],
+      toolbarTable: true
+    },
+
+    keyboard: {
+      bindings:
+        QuillTableBetter.keyboardBindings
+    },
+
+    resize: {
+      modules: [
+        'Resize',
+        'DisplaySize',
+        'Toolbar'
+      ]
+    }
+
+  };
+
+
+  /* =========================================================
+     RICH TEXT VALIDATION
+     ========================================================= */
+
+  private isRichTextEmpty(
+    html: string
+  ): boolean {
+
+    const text =
+      html
+        .replace(/<[^>]*>/g, '')
+        .replace(/&nbsp;/gi, ' ')
+        .trim();
+
+    return text.length === 0;
+
+  }
+
+
+  private validateRichTextBody(): boolean {
+
+    const body =
+      this.emailForm.controls.body.value;
+
+    if (!this.isRichTextEmpty(body)) {
+      return true;
+    }
+
+    this.emailForm.controls.body.setErrors({
+      required: true
+    });
+
+    this.emailForm.controls.body.markAsTouched();
+
+    this.sendError.set(
+      'Email body cannot be empty.'
+    );
+
+    this.activeTab.set('template');
+
+    return false;
+
+  }
+
+
+  /* =========================================================
+     EMAIL EDITOR
+     ========================================================= */
+
+  onEditorCreated(
+    editor: Quill
+  ): void {
+
+    this.emailEditor = editor;
+
+  }
+
+
+  get templateColumnNames(): string[] {
+
+    const columns =
+      new Set<string>();
+
+    for (
+      const recipient
+      of this.recipients
+    ) {
+
+      for (
+        const column
+        of Object.keys(
+          recipient.values
+        )
+      ) {
+
+        columns.add(column);
+
+      }
+
+    }
+
+    /*
+     * If the grid has not emitted its complete
+     * recipient list yet, fall back to the
+     * currently selected rows.
+     */
+    if (
+      columns.size === 0
+    ) {
+
+      for (
+        const recipient
+        of this.selectedRecipients
+      ) {
+
+        for (
+          const column
+          of Object.keys(
+            recipient.values
+          )
+        ) {
+
+          columns.add(column);
+
+        }
+
+      }
+
+    }
+
+    return [
+      ...columns
+    ];
+
+  }
+
+
+  insertTemplateField(
+    columnName: string
+  ): void {
+
+    if (!this.emailEditor) {
+      return;
+    }
+
+    const placeholder =
+      `{${columnName}}`;
+
+    const selection =
+      this.emailEditor.getSelection(
+        true
+      );
+
+    const index =
+      selection
+        ? selection.index
+        : Math.max(
+            0,
+            this.emailEditor.getLength() - 1
+          );
+
+    this.emailEditor.insertText(
+      index,
+      placeholder,
+      'user'
+    );
+
+    this.emailEditor.setSelection(
+      index + placeholder.length,
+      0,
+      'silent'
+    );
+
+    this.emailEditor.focus();
+
+  }
 
 
   /* =========================================================
@@ -279,6 +566,14 @@ This is a test email.`,
 
     }
 
+    if (!this.validateRichTextBody()) {
+      return;
+    }
+
+    /*
+     * Validate template placeholders before
+     * making the preview request.
+     */
     const templateErrors =
       this.validateTemplatePlaceholders();
 
@@ -385,6 +680,9 @@ This is a test email.`,
     }
 
 
+    /*
+     * Clear previous send error.
+     */
     this.sendError.set(null);
 
 
@@ -421,6 +719,10 @@ This is a test email.`,
 
     }
 
+    if (!this.validateRichTextBody()) {
+      return;
+    }
+
 
     /* -------------------------------------------------------
        3. Recipient validation
@@ -437,6 +739,13 @@ This is a test email.`,
     }
 
 
+    /*
+     * Explicitly run the same validation that the
+     * user can run with "Validate Rows".
+     *
+     * This ensures the selected rows are validated
+     * immediately before sending.
+     */
     await this.recipientInput.validateRows();
 
 
@@ -528,63 +837,34 @@ This is a test email.`,
     );
 
 
-    /* -------------------------------------------------------
-       Create initial Sending state
-       ------------------------------------------------------- */
-
     const initialSendEvents =
-      new Map<number, SendEvent>();
+  new Map<number, SendEvent>();
 
+for (
+  const recipient
+  of this.selectedRecipients
+) {
 
-    for (
-      const recipient
-      of this.selectedRecipients
-    ) {
-
-      initialSendEvents.set(
-        recipient.rowId,
-        {
-          operationId: '',
-          type: 'RowUpdate',
-          rowId: recipient.rowId,
-          status: 'Sending',
-          errors: [],
-          providerMessageId: null,
-          sentRows: null,
-          failedRows: null,
-          totalRows:
-            this.selectedRecipients.length
-        }
-      );
-
+  initialSendEvents.set(
+    recipient.rowId,
+    {
+      operationId: '',
+      type: 'RowUpdate',
+      rowId: recipient.rowId,
+      status: 'Sending',
+      errors: [],
+      providerMessageId: null,
+      sentRows: null,
+      failedRows: null,
+      totalRows: this.selectedRecipients.length
     }
+  );
 
+}
 
-    /*
-     * IMPORTANT:
-     *
-     * Do not clear this map afterwards.
-     *
-     * Previously the map was immediately replaced
-     * with an empty Map, which removed the initial
-     * "Sending" state.
-     */
-    this.sendRowEvents.set(
-      initialSendEvents
-    );
-
-
-    /*
-     * Push the exact Map into the child immediately.
-     *
-     * This avoids depending on Angular's @Input()
-     * propagation timing.
-     */
-    this.recipientInput
-      ?.refreshSendStatusCells(
-        initialSendEvents
-      );
-
+this.sendRowEvents.set(
+  initialSendEvents
+);
 
     /* -------------------------------------------------------
        6. Send POST request
@@ -607,6 +887,10 @@ This is a test email.`,
     this.sendSentRows.set(0);
 
     this.sendFailedRows.set(0);
+
+    this.sendRowEvents.set(
+      new Map<number, SendEvent>()
+    );
 
 
     this.sendApi
@@ -638,7 +922,7 @@ This is a test email.`,
            * The POST only tells us that the operation
            * was queued.
            *
-           * Actual progress comes from SSE.
+           * The actual progress now comes from SSE.
            */
           this.listenToSendEvents(
             response.operationId
@@ -713,6 +997,11 @@ This is a test email.`,
           );
 
 
+          /*
+           * If OperationCompleted has already arrived,
+           * handleSendEvent() will have set isSending
+           * to false.
+           */
           if (this.isSending()) {
 
             this.isSending.set(
@@ -731,9 +1020,12 @@ This is a test email.`,
 
         },
 
-
         complete: () => {
 
+          /*
+           * The backend can close the SSE stream after
+           * OperationCompleted.
+           */
           console.log(
             'SEND SSE COMPLETED'
           );
@@ -745,178 +1037,50 @@ This is a test email.`,
   }
 
 
-  /* =========================================================
-     HANDLE SSE EVENT
-     ========================================================= */
+ private handleSendEvent(
+  event: SendEvent
+): void {
 
-  private handleSendEvent(
-    event: SendEvent
-  ): void {
+  /*
+   * Ignore events belonging to another operation.
+   */
+  if (
+    this.sendOperationId() &&
+    event.operationId !== this.sendOperationId()
+  ) {
 
-    /*
-     * Ignore events belonging to another operation.
-     */
-    if (
-      this.sendOperationId() &&
-      event.operationId !== this.sendOperationId()
-    ) {
-
-      console.warn(
-        'Ignoring SSE event for another operation:',
-        event
-      );
-
-      return;
-
-    }
-
-
-    console.log(
-      'Handling send event:',
+    console.warn(
+      'Ignoring SSE event for another operation:',
       event
     );
 
+    return;
 
-    /* =======================================================
-       COMPLETION EVENT
-       ======================================================= */
-
-    /*
-     * Current backend protocol:
-     *
-     * Type: RowUpdate
-     * RowId: 0
-     * Status: Completed
-     *
-     * Treat this as operation completion.
-     */
-    if (
-      event.status === 'Completed'
-    ) {
-
-      if (
-        event.totalRows !== null
-      ) {
-
-        this.sendTotalRows.set(
-          event.totalRows
-        );
-
-      }
+  }
 
 
-      if (
-        event.sentRows !== null
-      ) {
-
-        this.sendSentRows.set(
-          event.sentRows
-        );
-
-      }
+  console.log(
+    'Handling send event:',
+    event
+  );
 
 
-      if (
-        event.failedRows !== null
-      ) {
+  /* =======================================================
+     COMPLETION EVENT
+     ======================================================= */
 
-        this.sendFailedRows.set(
-          event.failedRows
-        );
-
-      }
-
-
-      this.sendProcessedRows.set(
-        this.sendSentRows() +
-        this.sendFailedRows()
-      );
-
-
-      this.sendStatus.set(
-        'Completed'
-      );
-
-
-      this.isSending.set(
-        false
-      );
-
-
-      if (
-        this.sendFailedRows() > 0
-      ) {
-
-        this.sendError.set(
-          `${this.sendFailedRows()} recipient(s) failed.`
-        );
-
-      }
-
-
-      console.log(
-        'Send operation completed:',
-        {
-          sent: this.sendSentRows(),
-          failed: this.sendFailedRows(),
-          total: this.sendTotalRows()
-        }
-      );
-
-
-      return;
-
-    }
-
-
-    /* =======================================================
-       ROW UPDATE
-       ======================================================= */
-
-    if (
-      event.rowId !== null
-    ) {
-
-      const updated =
-        new Map(
-          this.sendRowEvents()
-        );
-
-
-      updated.set(
-        event.rowId,
-        event
-      );
-
-
-      /*
-       * Update the parent signal.
-       */
-      this.sendRowEvents.set(
-        updated
-      );
-
-
-      /*
-       * IMPORTANT:
-       *
-       * Pass the new Map directly to the child.
-       *
-       * Otherwise the child may still have the previous
-       * @Input() value because Angular has not propagated
-       * the signal value yet.
-       */
-      this.recipientInput
-        ?.refreshSendStatusCells(
-          updated
-        );
-
-    }
-
-
-    /* -------------------------------------------------------
-       Backend counters
-       ------------------------------------------------------- */
+  /*
+   * Current backend protocol:
+   *
+   * Type: RowUpdate
+   * RowId: 0
+   * Status: Completed
+   *
+   * Treat this as the operation completion event.
+   */
+  if (
+    event.status === 'Completed'
+  ) {
 
     if (
       event.totalRows !== null
@@ -951,46 +1115,6 @@ This is a test email.`,
     }
 
 
-    /* -------------------------------------------------------
-       Derive counters when backend doesn't send them
-       ------------------------------------------------------- */
-
-    if (
-      event.sentRows === null &&
-      event.failedRows === null
-    ) {
-
-      const events =
-        [
-          ...this.sendRowEvents().values()
-        ];
-
-
-      const sent =
-        events.filter(
-          rowEvent =>
-            rowEvent.status === 'Sent'
-        ).length;
-
-
-      const failed =
-        events.filter(
-          rowEvent =>
-            rowEvent.status === 'Failed'
-        ).length;
-
-
-      this.sendSentRows.set(
-        sent
-      );
-
-      this.sendFailedRows.set(
-        failed
-      );
-
-    }
-
-
     this.sendProcessedRows.set(
       this.sendSentRows() +
       this.sendFailedRows()
@@ -998,208 +1122,298 @@ This is a test email.`,
 
 
     this.sendStatus.set(
-      'Running'
+      'Completed'
+    );
+
+
+    this.isSending.set(
+      false
+    );
+
+
+    if (
+      this.sendFailedRows() > 0
+    ) {
+
+      this.sendError.set(
+        `${this.sendFailedRows()} recipient(s) failed.`
+      );
+
+    }
+
+
+    console.log(
+      'Send operation completed:',
+      {
+        sent: this.sendSentRows(),
+        failed: this.sendFailedRows(),
+        total: this.sendTotalRows()
+      }
+    );
+
+
+    return;
+
+  }
+
+
+  /* =======================================================
+     ROW UPDATE
+     ======================================================= */
+
+  if (
+    event.rowId !== null
+  ) {
+
+    const updated =
+      new Map(
+        this.sendRowEvents()
+      );
+
+    updated.set(
+      event.rowId,
+      event
+    );
+
+    this.sendRowEvents.set(
+      updated
+    );
+
+    this.recipientInput?.refreshSendStatusCells(updated);
+
+  }
+
+
+  /*
+   * Use counters supplied by the backend when available.
+   */
+  if (
+    event.totalRows !== null
+  ) {
+
+    this.sendTotalRows.set(
+      event.totalRows
     );
 
   }
 
+
+  if (
+    event.sentRows !== null
+  ) {
+
+    this.sendSentRows.set(
+      event.sentRows
+    );
+
+  }
+
+
+  if (
+    event.failedRows !== null
+  ) {
+
+    this.sendFailedRows.set(
+      event.failedRows
+    );
+
+  }
+
+
+  /*
+   * If this is a normal row event without counters,
+   * derive the counts from the row events we've received.
+   */
+  if (
+    event.sentRows === null &&
+    event.failedRows === null
+  ) {
+
+    const events =
+      [
+        ...this.sendRowEvents().values()
+      ];
+
+
+    const sent =
+      events.filter(
+        rowEvent =>
+          rowEvent.status === 'Sent'
+      ).length;
+
+
+    const failed =
+      events.filter(
+        rowEvent =>
+          rowEvent.status === 'Failed'
+      ).length;
+
+
+    this.sendSentRows.set(
+      sent
+    );
+
+    this.sendFailedRows.set(
+      failed
+    );
+
+  }
+
+
+  this.sendProcessedRows.set(
+    this.sendSentRows() +
+    this.sendFailedRows()
+  );
+
+
+  this.sendStatus.set(
+    'Running'
+  );
+
+}
 
   /* =========================================================
      TEMPLATE VALIDATION
      ========================================================= */
 
-  private validateTemplatePlaceholders(): string[] {
+ /* =========================================================
+   TEMPLATE VALIDATION
+   ========================================================= */
 
-    const formValue =
-      this.emailForm.getRawValue();
+private validateTemplatePlaceholders(): string[] {
 
-    const columnNames =
-      this.getTemplateColumnNames();
+  const formValue =
+    this.emailForm.getRawValue();
 
-    const allowedColumns =
-      new Set(columnNames);
+  const columnNames =
+    this.getTemplateColumnNames();
 
-    const errors: string[] = [];
+  const allowedColumns =
+    new Set(columnNames);
 
+  const errors: string[] = [];
 
-    this.validateTemplateText(
-      'Subject',
-      formValue.subject,
-      allowedColumns,
-      errors
-    );
+  this.validateTemplateText(
+    'Subject',
+    formValue.subject,
+    allowedColumns,
+    errors
+  );
 
+  this.validateTemplateText(
+    'Body',
+    formValue.body,
+    allowedColumns,
+    errors
+  );
 
-    this.validateTemplateText(
-      'Body',
-      formValue.body,
-      allowedColumns,
-      errors
-    );
-
-
-    return errors;
-
-  }
+  return errors;
+}
 
 
-  private validateTemplateText(
-    fieldName: string,
-    text: string,
-    allowedColumns: Set<string>,
-    errors: string[]
-  ): void {
+private validateTemplateText(
+  fieldName: string,
+  text: string,
+  allowedColumns: Set<string>,
+  errors: string[]
+): void {
+
+  /*
+   * Valid template field:
+   *
+   * {Name}
+   * {Email}
+   * {Company}
+   *
+   * The content between the braces must exactly
+   * match one of the recipient column names.
+   */
+
+  const placeholderPattern =
+    /{([^{}]*)}/g;
+
+  let match:
+    RegExpExecArray | null;
+
+  const matchedRanges: Array<{
+    start: number;
+    end: number;
+  }> = [];
+
+
+  /*
+   * Find every {Field} expression.
+   */
+  while (
+    (
+      match =
+        placeholderPattern.exec(text)
+    ) !== null
+  ) {
+
+    const fullPlaceholder =
+      match[0];
+
+    const field =
+      match[1];
+
+    const start =
+      match.index;
+
+    const end =
+      start + fullPlaceholder.length;
+
+
+    matchedRanges.push({
+      start,
+      end
+    });
+
 
     /*
-     * Valid:
+     * Empty field:
      *
-     * {Name}
-     * {Email}
-     * {Company}
+     * {}
      */
+    if (!field) {
 
-    const placeholderPattern =
-      /{([^{}]*)}/g;
+      errors.push(
+        `${fieldName} contains an empty template field "{}".`
+      );
 
-    let match:
-      RegExpExecArray | null;
-
-    const matchedRanges:
-      Array<{
-        start: number;
-        end: number;
-      }> = [];
-
-
-    while (
-      (
-        match =
-          placeholderPattern.exec(text)
-      ) !== null
-    ) {
-
-      const fullPlaceholder =
-        match[0];
-
-      const field =
-        match[1];
-
-      const start =
-        match.index;
-
-      const end =
-        start +
-        fullPlaceholder.length;
-
-
-      matchedRanges.push({
-        start,
-        end
-      });
-
-
-      if (!field) {
-
-        errors.push(
-          `${fieldName} contains an empty template field "{}".`
-        );
-
-        continue;
-
-      }
-
-
-      if (
-        field !== field.trim()
-      ) {
-
-        errors.push(
-          `${fieldName} contains invalid template field "${fullPlaceholder}". Use {ColumnName} without spaces.`
-        );
-
-        continue;
-
-      }
-
-
-      if (
-        !allowedColumns.has(field)
-      ) {
-
-        errors.push(
-          `${fieldName} contains unknown field "${fullPlaceholder}".`
-        );
-
-      }
+      continue;
 
     }
 
 
-    const coveredCharacters =
-      new Set<number>();
-
-
-    for (
-      const range
-      of matchedRanges
-    ) {
-
-      for (
-        let index = range.start;
-        index < range.end;
-        index++
-      ) {
-
-        coveredCharacters.add(
-          index
-        );
-
-      }
-
-    }
-
-
-    for (
-      let index = 0;
-      index < text.length;
-      index++
-    ) {
-
-      if (
-        coveredCharacters.has(index)
-      ) {
-
-        continue;
-
-      }
-
-
-      const character =
-        text[index];
-
-
-      if (
-        character === '{' ||
-        character === '}'
-      ) {
-
-        errors.push(
-          `${fieldName} contains invalid template braces. Use {ColumnName} for recipient fields.`
-        );
-
-        break;
-
-      }
-
-    }
-
-
+    /*
+     * Whitespace inside the field is not allowed.
+     *
+     * { Name }
+     */
     if (
-      /{{|}}/.test(text)
+      field !== field.trim()
     ) {
 
       errors.push(
-        `${fieldName} contains invalid double braces. Use {ColumnName}, not {{ColumnName}}.`
+        `${fieldName} contains invalid template field "${fullPlaceholder}". Use {ColumnName} without spaces.`
+      );
+
+      continue;
+
+    }
+
+
+    /*
+     * Check that the field is an actual
+     * recipient column.
+     */
+    if (
+      !allowedColumns.has(field)
+    ) {
+
+      errors.push(
+        `${fieldName} contains unknown field "${fullPlaceholder}".`
       );
 
     }
@@ -1207,37 +1421,136 @@ This is a test email.`,
   }
 
 
-  private getTemplateColumnNames(): string[] {
+  /*
+   * Detect malformed braces that weren't part
+   * of a valid {Field} expression.
+   *
+   * Examples:
+   *
+   * {{Name}}
+   * {Name
+   * Name}
+   * }
+   * {
+   */
+  const coveredCharacters =
+    new Set<number>();
 
-    const columns =
-      new Set<string>();
 
+  for (
+    const range
+    of matchedRanges
+  ) {
 
     for (
-      const recipient
-      of this.selectedRecipients
+      let index = range.start;
+      index < range.end;
+      index++
     ) {
 
-      for (
-        const column
-        of Object.keys(
-          recipient.values
-        )
-      ) {
+      coveredCharacters.add(
+        index
+      );
 
-        columns.add(column);
+    }
 
-      }
+  }
+
+
+  for (
+    let index = 0;
+    index < text.length;
+    index++
+  ) {
+
+    if (
+      coveredCharacters.has(index)
+    ) {
+
+      continue;
 
     }
 
 
-    return [
-      ...columns
-    ];
+    const character =
+      text[index];
+
+
+    if (
+      character === '{' ||
+      character === '}'
+    ) {
+
+      errors.push(
+        `${fieldName} contains invalid template braces. Use {ColumnName} for recipient fields.`
+      );
+
+      /*
+       * One error is enough for malformed
+       * standalone braces.
+       */
+      break;
+
+    }
 
   }
 
+
+  /*
+   * Specifically detect double braces such as:
+   *
+   * {{Name}}
+   *
+   * The regex above can otherwise interpret the
+   * inner {Name} as a valid expression.
+   */
+  if (
+    /{{|}}/.test(text)
+  ) {
+
+    errors.push(
+      `${fieldName} contains invalid double braces. Use {ColumnName}, not {{ColumnName}}.`
+    );
+
+  }
+
+}
+
+
+private getTemplateColumnNames(): string[] {
+
+  const columns =
+    new Set<string>();
+
+
+  /*
+   * The selected recipients are the rows that
+   * will actually be sent.
+   */
+  for (
+    const recipient
+    of this.selectedRecipients
+  ) {
+
+    for (
+      const column
+      of Object.keys(
+        recipient.values
+      )
+    ) {
+
+      columns.add(column);
+
+    }
+
+  }
+
+
+  return [
+    ...columns
+  ];
+
+}
 
   /* =========================================================
      HTTP ERROR

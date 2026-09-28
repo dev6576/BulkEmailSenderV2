@@ -5,140 +5,89 @@
   min-height: 0;
 }
 
-
 .send-page {
   width: 100%;
   min-height: 100%;
-
   display: flex;
   flex-direction: column;
-
   overflow-y: auto;
   overflow-x: hidden;
-
   box-sizing: border-box;
 }
 
-
-/* =========================================================
-   HEADER
-   ========================================================= */
-
 .send-header {
   flex: 0 0 auto;
-
   padding: 20px 24px 12px;
 }
 
-
 .send-header h1 {
   margin: 0;
-
   font-size: 24px;
 }
 
-
-/* =========================================================
-   TABS
-   ========================================================= */
-
 .send-tabs {
   display: flex;
-
   flex: 0 0 auto;
-
   gap: 4px;
-
   padding: 0 24px;
-
   border-bottom: 1px solid #ddd;
 }
 
-
 .send-tab {
   padding: 10px 18px;
-
   border: 0;
   border-bottom: 2px solid transparent;
-
   background: transparent;
-
   color: #666;
-
   cursor: pointer;
-
   font-size: 14px;
   font-weight: 500;
 }
 
-
 .send-tab:hover {
   color: #222;
-
   background: #f7f7f7;
 }
 
-
 .send-tab.active {
   color: #111;
-
   border-bottom-color: #222;
 }
 
-
-/* =========================================================
-   WORKSPACE
-   ========================================================= */
-
 .send-workspace {
   flex: 1 1 0;
-
   min-height: 0;
-
   display: flex;
   flex-direction: column;
-
   padding: 16px 24px;
-
-  overflow: hidden;
-
+  overflow: visible;
   box-sizing: border-box;
 }
-
 
 .tab-panel {
   flex: 1 1 0;
-
   width: 100%;
   height: 100%;
   min-height: 0;
-
   box-sizing: border-box;
 }
-
 
 .data-panel {
   display: flex;
   flex-direction: column;
-
   min-height: 0;
-
   overflow: hidden;
 }
 
-
 .data-panel app-recipient-input {
   display: block;
-
   width: 100%;
   height: 100%;
-
   min-height: 0;
 }
 
-
 .template-panel {
-  overflow: auto;
+  overflow: visible;
 }
 
 
@@ -148,90 +97,53 @@
 
 .send-action-bar {
   flex: 0 0 auto;
-
   display: flex;
-
   align-items: center;
-
   justify-content: space-between;
-
   gap: 16px;
-
   margin-bottom: 10px;
-
   padding: 10px 12px;
-
   border: 1px solid #ddd;
-
   border-radius: 6px;
-
   background: #fff;
-
   box-sizing: border-box;
 }
 
-
 .send-action-info {
   display: flex;
-
   align-items: baseline;
-
   gap: 6px;
-
   color: #666;
-
   font-size: 13px;
 }
 
-
 .send-action-info strong {
   color: #111;
-
   font-size: 15px;
 }
 
-
-/* =========================================================
-   SEND BUTTON
-   ========================================================= */
-
 .send-button {
   flex: 0 0 auto;
-
   min-width: 110px;
-
   padding: 9px 16px;
-
   border: 1px solid #222;
-
   border-radius: 6px;
-
   background: #222;
-
   color: #fff;
-
   cursor: pointer;
-
   font: inherit;
-
   font-size: 14px;
-
   font-weight: 600;
 }
-
 
 .send-button:hover:not(:disabled) {
   background: #000;
 }
 
-
 .send-button:disabled {
   border-color: #ccc;
-
   background: #e5e5e5;
-
   color: #888;
-
   cursor: not-allowed;
 }
 
@@ -239,25 +151,19 @@
 /* =========================================================
    SEND ERROR
    ========================================================= */
+
 .send-error {
   flex: 0 0 auto;
-
   margin-bottom: 10px;
-
   padding: 9px 12px;
-
   border: 1px solid #f0b7b1;
-
   border-radius: 6px;
-
   background: #fff5f3;
-
   color: #b42318;
-
   font-size: 13px;
-
   line-height: 1.4;
 }
+
 
 /* =========================================================
    SEND PROGRESS
@@ -265,74 +171,47 @@
 
 .send-progress-panel {
   flex: 0 0 auto;
-
   margin-bottom: 10px;
-
   padding: 10px 12px;
-
   border: 1px solid #ddd;
-
   border-radius: 6px;
-
   background: #fafafa;
-
   box-sizing: border-box;
 }
 
-
 .send-progress-header {
   display: flex;
-
   align-items: center;
-
   justify-content: space-between;
-
   gap: 12px;
-
   margin-bottom: 7px;
-
   color: #555;
-
   font-size: 12px;
 }
 
-
 .send-progress-header > div {
   display: flex;
-
   align-items: center;
-
   gap: 8px;
-
   min-width: 0;
 }
-
 
 .send-progress-header strong {
   color: #222;
 }
 
-
 .send-progress {
   width: 100%;
-
   height: 5px;
-
   overflow: hidden;
-
   border-radius: 3px;
-
   background: #e5e7eb;
 }
 
-
 .send-progress-bar {
   height: 100%;
-
   border-radius: 3px;
-
   background: #222;
-
   transition: width 0.2s ease;
 }
 
@@ -342,124 +221,363 @@
    ========================================================= */
 
 .email-editor {
-  max-width: 900px;
+  max-width: 1000px;
 }
-
 
 .section-heading {
   margin-bottom: 20px;
 }
 
-
 .section-heading h2 {
   margin: 0 0 4px;
 }
 
-
 .section-heading p {
   margin: 0;
-
   color: #666;
 }
 
-
 .email-editor form {
   display: flex;
-
   flex-direction: column;
-
   gap: 8px;
 }
 
-
 .email-editor label {
   display: flex;
-
   flex-direction: column;
-
   gap: 6px;
-
   margin-top: 8px;
-
   font-weight: 500;
 }
 
-
-.email-editor input,
-.email-editor textarea {
+.email-editor input {
   width: 100%;
-
   box-sizing: border-box;
-
   padding: 10px 12px;
-
   border: 1px solid #ccc;
-
   border-radius: 6px;
-
   font: inherit;
-
   font-weight: 400;
-
-  resize: vertical;
 }
 
-
-.email-editor input:focus,
-.email-editor textarea:focus {
+.email-editor input:focus {
   outline: none;
-
   border-color: #666;
-
-  box-shadow:
-    0 0 0 2px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.08);
 }
 
 
 /* =========================================================
-   TEMPLATE HELP
+   QUILL EMAIL BODY
+   ========================================================= */
+
+.email-body-label {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  font-weight: 500;
+}
+
+.email-body-label quill-editor {
+  display: block;
+  width: 100%;
+  font-weight: 400;
+}
+
+
+/*
+ * Quill is rendered inside ngx-quill.
+ * ::ng-deep allows these styles to reach Quill's
+ * generated toolbar/editor DOM.
+ */
+
+:host ::ng-deep .email-body-label .ql-toolbar {
+  position: relative;
+  z-index: 100;
+  overflow: visible !important;
+  border-radius: 6px 6px 0 0;
+}
+
+:host ::ng-deep .email-body-label .ql-container {
+  position: relative;
+  z-index: 1;
+  border-radius: 0 0 6px 6px;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+:host ::ng-deep .email-body-label .ql-editor {
+  min-height: 420px;
+  line-height: 1.5;
+  overflow-y: auto;
+}
+
+:host ::ng-deep .email-body-label .ql-editor.ql-blank::before {
+  color: #999;
+  font-style: normal;
+}
+
+
+/* =========================================================
+   QUILL PICKERS
+   ========================================================= */
+
+/*
+ * IMPORTANT:
+ *
+ * Do NOT set:
+ *
+ * display: block !important;
+ * visibility: visible !important;
+ * opacity: 1 !important;
+ *
+ * on .ql-picker-options.
+ *
+ * Quill itself controls whether a picker is open or closed.
+ */
+
+:host ::ng-deep .email-body-label .ql-toolbar .ql-picker {
+  position: relative;
+}
+
+:host ::ng-deep
+.email-body-label
+.ql-toolbar
+.ql-picker.ql-expanded {
+  z-index: 10000;
+}
+
+:host ::ng-deep
+.email-body-label
+.ql-toolbar
+.ql-picker.ql-expanded
+.ql-picker-options {
+  z-index: 10001;
+}
+
+:host ::ng-deep
+.email-body-label
+.ql-toolbar
+.ql-picker-label {
+  cursor: pointer;
+}
+
+:host ::ng-deep
+.email-body-label
+.ql-toolbar
+.ql-picker-item {
+  cursor: pointer;
+}
+
+
+/* =========================================================
+   SIZE PICKER
+   ========================================================= */
+
+:host ::ng-deep
+.email-body-label
+.ql-toolbar
+.ql-picker.ql-size {
+  position: relative;
+}
+
+:host ::ng-deep
+.email-body-label
+.ql-toolbar
+.ql-picker.ql-size.ql-expanded {
+  z-index: 10002;
+}
+
+:host ::ng-deep
+.email-body-label
+.ql-toolbar
+.ql-picker.ql-size.ql-expanded
+.ql-picker-options {
+  z-index: 10003;
+  min-width: 100px;
+}
+
+
+/* =========================================================
+   HEADER PICKER
+   ========================================================= */
+
+:host ::ng-deep
+.email-body-label
+.ql-toolbar
+.ql-picker.ql-header {
+  position: relative;
+}
+
+:host ::ng-deep
+.email-body-label
+.ql-toolbar
+.ql-picker.ql-header.ql-expanded {
+  z-index: 10002;
+}
+
+:host ::ng-deep
+.email-body-label
+.ql-toolbar
+.ql-picker.ql-header.ql-expanded
+.ql-picker-options {
+  z-index: 10003;
+  min-width: 100px;
+}
+
+
+/* =========================================================
+   COLOR PICKER
+   ========================================================= */
+
+:host ::ng-deep
+.email-body-label
+.ql-toolbar
+.ql-color-picker {
+  position: relative;
+}
+
+:host ::ng-deep
+.email-body-label
+.ql-toolbar
+.ql-color-picker.ql-expanded {
+  z-index: 10004;
+}
+
+:host ::ng-deep
+.email-body-label
+.ql-toolbar
+.ql-color-picker.ql-expanded
+.ql-picker-options {
+  z-index: 10005;
+}
+
+
+/* =========================================================
+   BACKGROUND / HIGHLIGHT PICKER
+   ========================================================= */
+
+:host ::ng-deep
+.email-body-label
+.ql-toolbar
+.ql-background {
+  position: relative;
+}
+
+:host ::ng-deep
+.email-body-label
+.ql-toolbar
+.ql-background.ql-expanded {
+  z-index: 10004;
+}
+
+:host ::ng-deep
+.email-body-label
+.ql-toolbar
+.ql-background.ql-expanded
+.ql-picker-options {
+  z-index: 10005;
+}
+
+
+/* =========================================================
+   ALIGNMENT PICKER
+   ========================================================= */
+
+:host ::ng-deep
+.email-body-label
+.ql-toolbar
+.ql-picker.ql-align {
+  position: relative;
+}
+
+:host ::ng-deep
+.email-body-label
+.ql-toolbar
+.ql-picker.ql-align.ql-expanded {
+  z-index: 10002;
+}
+
+:host ::ng-deep
+.email-body-label
+.ql-toolbar
+.ql-picker.ql-align.ql-expanded
+.ql-picker-options {
+  z-index: 10003;
+}
+
+
+/* =========================================================
+   QUILL TABLE
+   ========================================================= */
+
+:host ::ng-deep
+.email-body-label
+.ql-table-better-container {
+  position: relative;
+  z-index: 10000;
+}
+
+:host ::ng-deep
+.email-body-label
+.ql-table-better-toolbar {
+  position: relative;
+  z-index: 10001;
+}
+
+
+/* =========================================================
+   PERSONALIZATION
    ========================================================= */
 
 .template-help {
+  position: relative;
+  z-index: 1;
   margin-top: 16px;
-
-  padding: 12px 14px;
-
+  padding: 14px;
   border: 1px solid #ddd;
-
   border-radius: 6px;
-
   background: #fafafa;
-
   color: #555;
-
   font-size: 13px;
-
   line-height: 1.5;
 }
 
+.template-help-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
 
 .template-help strong {
   display: block;
-
-  margin-bottom: 4px;
-
+  margin-bottom: 3px;
   color: #222;
 }
-
 
 .template-help p {
   margin: 4px 0;
 }
 
+.template-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 12px;
+}
 
-code {
-  padding: 1px 4px;
-
-  border-radius: 3px;
-
-  background: #eee;
-
+.template-field {
+  padding: 6px 9px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background: #fff;
+  color: #333;
+  cursor: pointer;
+  font: inherit;
   font-family:
     ui-monospace,
     SFMono-Regular,
@@ -467,20 +585,52 @@ code {
     Monaco,
     Consolas,
     monospace;
-
   font-size: 12px;
+}
+
+.template-field:hover {
+  border-color: #777;
+  background: #f2f2f2;
+}
+
+.template-field:active {
+  background: #e8e8e8;
+}
+
+.template-fields-empty {
+  margin-top: 10px !important;
+  color: #777;
+}
+
+.template-help-note {
+  margin-top: 12px !important;
+  padding-top: 10px;
+  border-top: 1px solid #e5e5e5;
+  color: #666;
 }
 
 
 /* =========================================================
-   VALIDATION
+   GENERAL
    ========================================================= */
+
+code {
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: #eee;
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    monospace;
+  font-size: 12px;
+}
 
 .validation-error {
   margin-top: 4px;
-
   color: #b42318;
-
   font-size: 13px;
 }
 
@@ -491,162 +641,102 @@ code {
 
 .preview-dock {
   flex: 0 0 240px;
-
   min-height: 0;
-
   display: flex;
   flex-direction: column;
-
   border-top: 1px solid #d9d9d9;
-
   background: #fafafa;
-
-  transition:
-    flex-basis 0.18s ease;
+  transition: flex-basis 0.18s ease;
 }
-
 
 .preview-dock.collapsed {
   flex-basis: 44px;
 }
 
-
 .preview-dock-header {
   flex: 0 0 44px;
-
   display: flex;
-
   align-items: center;
-
   justify-content: space-between;
-
   box-sizing: border-box;
-
   padding: 8px 24px;
-
   border-bottom: 1px solid #e5e5e5;
-
   background: #fff;
 }
 
-
 .preview-dock-title {
   display: flex;
-
   align-items: center;
-
   min-width: 0;
 }
 
-
 .preview-dock-header h2 {
   margin: 0;
-
   font-size: 16px;
 }
 
-
 .preview-recipient {
   margin-left: 10px;
-
   overflow: hidden;
-
   color: #666;
-
   font-size: 13px;
-
   text-overflow: ellipsis;
-
   white-space: nowrap;
 }
-
 
 .preview-toggle-button {
   width: 28px;
   height: 28px;
-
   flex: 0 0 28px;
-
   padding: 0;
-
   border: 1px solid #ccc;
-
   border-radius: 5px;
-
   background: #fff;
-
   color: #333;
-
   cursor: pointer;
-
   font-size: 18px;
-
   line-height: 1;
 }
-
 
 .preview-toggle-button:hover {
   background: #f2f2f2;
 }
 
-
 .preview-dock-content {
   flex: 1 1 0;
-
   min-height: 0;
-
   overflow: auto;
-
   padding: 12px 24px;
 }
 
-
 .preview-empty {
   color: #777;
-
   font-size: 13px;
 }
-
 
 .preview-loading {
   color: #555;
-
   font-size: 13px;
 }
 
-
 .preview-progress {
   width: 100%;
-
   height: 4px;
-
   margin-top: 8px;
-
   overflow: hidden;
-
   border-radius: 2px;
-
   background: #e5e7eb;
 }
 
-
 .preview-progress-bar {
   width: 35%;
-
   height: 100%;
-
   border-radius: 2px;
-
   background: #222;
-
-  animation:
-    preview-progress-animation
-    1s ease-in-out infinite;
+  animation: preview-progress-animation 1s ease-in-out infinite;
 }
 
-
 @keyframes preview-progress-animation {
-
   0% {
     transform: translateX(-120%);
   }
@@ -658,47 +748,52 @@ code {
   100% {
     transform: translateX(300%);
   }
-
 }
-
 
 .preview-error {
   color: #b42318;
 }
 
-
 .preview-result h3 {
   margin: 0 0 8px;
-
   font-size: 15px;
 }
 
-
-.preview-result pre {
-  margin: 0;
-
-  padding: 12px;
-
-  overflow: auto;
-
-  white-space: pre-wrap;
-
+.preview-email {
+  max-width: 900px;
+  padding: 20px;
   border: 1px solid #ddd;
-
   border-radius: 6px;
-
   background: #fff;
+  box-sizing: border-box;
+}
 
-  font-family: inherit;
-
-  font-size: 13px;
-
+.preview-email-content {
+  min-height: 100px;
+  color: #222;
+  font-size: 14px;
   line-height: 1.5;
+}
+
+.preview-email-content img {
+  max-width: 100%;
+  height: auto;
+}
+
+.preview-email-content table {
+  max-width: 100%;
+  border-collapse: collapse;
+}
+
+.preview-email-content td,
+.preview-email-content th {
+  border: 1px solid #ccc;
+  padding: 6px 8px;
 }
 
 
 /* =========================================================
-   HIDDEN TAB
+   HIDDEN TABS
    ========================================================= */
 
 .tab-panel-hidden {
@@ -711,37 +806,29 @@ code {
    ========================================================= */
 
 @media (max-width: 700px) {
-
   .send-header,
   .send-workspace,
   .send-tabs,
   .preview-dock-header,
   .preview-dock-content {
     padding-left: 14px;
-
     padding-right: 14px;
   }
 
-
   .send-action-bar {
     align-items: stretch;
-
     flex-direction: column;
   }
-
 
   .send-button {
     width: 100%;
   }
 
-
   .preview-dock {
     flex-basis: 200px;
   }
 
-
   .preview-dock.collapsed {
     flex-basis: 44px;
   }
-
 }
