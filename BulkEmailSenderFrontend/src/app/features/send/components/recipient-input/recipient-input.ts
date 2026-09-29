@@ -402,57 +402,21 @@ export class RecipientInput {
   }
 
 
-  /*
-   * IMPORTANT:
-   *
-   * Send status is stored outside AG Grid's rowData.
-   *
-   * Therefore we explicitly replace each row's data
-   * object. This forces AG Grid to perform the same
-   * kind of row refresh that happens when a cell is
-   * edited and Enter is pressed.
-   */
-  this.gridApi.forEachNode(
-    node => {
+  const affectedRows = [...sendRowEvents.keys()]
+    .map(rowId => this.gridApi!.getRowNode(String(rowId)))
+    .filter((node): node is NonNullable<typeof node> => !!node);
 
-      if (!node.data) {
-        return;
-      }
-
-
-      node.setData({
-        ...node.data
-      });
-
-    }
-  );
-
-
-  /*
-   * Now force the send-status column to re-evaluate
-   * its valueGetter/cellRenderer.
-   */
-  this.gridApi.refreshCells({
-
-    columns: [
-      'sendStatus'
-    ],
-
-    force: true
-
-  });
-
-
-  /*
-   * Redraw the rows as a final guarantee that the
-   * function-based cellRenderer executes again.
-   */
-  this.gridApi.redrawRows();
+  if (affectedRows.length > 0) {
+    // Renderer output depends on the external event map, so redraw these rows
+    // explicitly after every SSE update instead of changing recipient row data.
+    this.gridApi.redrawRows({ rowNodes: affectedRows });
+  }
 
 
   /*
    * Make Angular process the updated component state.
    */
+  this.changeDetectorRef.markForCheck();
   this.changeDetectorRef.detectChanges();
 
 }

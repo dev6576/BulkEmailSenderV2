@@ -1,5 +1,6 @@
 import {
   Component,
+  NgZone,
   ViewChild,
   inject,
   signal
@@ -33,6 +34,7 @@ import {
 
 import {
   PreviewResponse,
+  EmailAttachmentRequest,
   Recipient,
   SendEvent
 } from '../../models/send.models';
@@ -71,8 +73,19 @@ type SendTab =
 })
 export class Send {
 
+  readonly maxAttachmentFileSize = 10 * 1024 * 1024;
+  readonly maxTotalAttachmentSize = 25 * 1024 * 1024;
+  attachmentItems: Array<{ fileName: string; size: number }> = [];
+  attachmentError = signal<string | null>(null);
+  sourceMode = signal<'visual' | 'html'>('visual');
+  sourceHtml = '';
+  showSendConfirmation = signal(false);
+
   private readonly sendApi =
     inject(SendApiService);
+
+  private readonly ngZone =
+    inject(NgZone);
 
 
   /*
@@ -356,6 +369,85 @@ export class Send {
 
   }
 
+  get attachmentsArray(): FormArray<FormControl<string>> {
+    return this.emailForm.controls.attachments;
+  }
+
+  async onAttachmentsSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const files = Array.from(input.files ?? []);
+    input.value = '';
+    this.attachmentError.set(null);
+    for (const file of files) {
+      if (file.size === 0) {
+        this.attachmentError.set(`${file.name} is empty and was not added.`);
+        continue;
+      }
+      if (file.size > this.maxAttachmentFileSize) {
+        this.attachmentError.set(`${file.name} exceeds the 10 MB per-file limit.`);
+        continue;
+      }
+      if (this.attachmentItems.some(item => item.fileName === file.name && item.size === file.size)) {
+        continue;
+      }
+      if (this.totalAttachmentSize + file.size > this.maxTotalAttachmentSize) {
+        this.attachmentError.set(`${file.name} would exceed the 25 MB total attachment limit.`);
+        continue;
+      }
+      try {
+        const contentBase64 = await this.readFileAsBase64(file);
+        this.attachmentsArray.push(new FormControl(contentBase64, { nonNullable: true }));
+        this.attachmentItems.push({ fileName: file.name, size: file.size });
+      } catch {
+        this.attachmentError.set(`Unable to read ${file.name}. Please try again.`);
+      }
+    }
+  }
+
+  removeAttachment(index: number): void {
+    this.attachmentsArray.removeAt(index);
+    this.attachmentItems.splice(index, 1);
+    this.attachmentItems = [...this.attachmentItems];
+    this.attachmentError.set(null);
+  }
+
+  get totalAttachmentSize(): number {
+    return this.attachmentItems.reduce((total, item) => total + item.size, 0);
+  }
+
+  get previewAttachmentNames(): string {
+    return this.attachmentItems.map(item => item.fileName).join(', ');
+  }
+
+  formatFileSize(size: number): string {
+    return size < 1024 * 1024
+      ? `${Math.max(1, Math.round(size / 1024))} KB`
+      : `${(size / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  private readFileAsBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(',')[1] ?? '');
+      reader.onerror = () => reject(new Error(`Unable to read ${file.name}.`));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  setSourceMode(mode: 'visual' | 'html'): void {
+    if (mode === this.sourceMode()) return;
+    if (mode === 'html') this.sourceHtml = this.emailForm.controls.body.value;
+    else this.emailForm.controls.body.setValue(this.sourceHtml);
+    this.sourceMode.set(mode);
+  }
+
+  private buildAttachments(): EmailAttachmentRequest[] {
+    return this.attachmentItems.map((item, index) => ({
+      fileName: item.fileName,
+      contentBase64: this.attachmentsArray.at(index).value
+    }));
+  }
+
 
   get templateColumnNames(): string[] {
 
@@ -613,7 +705,7 @@ export class Send {
         body:
           formValue.body,
 
-        attachments: []
+        attachments: this.buildAttachments()
 
       }
 
@@ -803,159 +895,59 @@ export class Send {
     }
 
 
-    /* -------------------------------------------------------
-       5. Build request
-       ------------------------------------------------------- */
-
-    const formValue =
-      this.emailForm.getRawValue();
-
-
-    const request = {
-
-      recipients:
-        this.selectedRecipients,
-
-      email: {
-
-        subject:
-          formValue.subject,
-
-        body:
-          formValue.body,
-
-        attachments: []
-
-      }
-
-    };
-
-
-    console.log(
-      'SEND REQUEST:',
-      request
-    );
-
-
-    const initialSendEvents =
-  new Map<number, SendEvent>();
-
-for (
-  const recipient
-  of this.selectedRecipients
-) {
-
-  initialSendEvents.set(
-    recipient.rowId,
-    {
-      operationId: '',
-      type: 'RowUpdate',
-      rowId: recipient.rowId,
-      status: 'Sending',
-      errors: [],
-      providerMessageId: null,
-      sentRows: null,
-      failedRows: null,
-      totalRows: this.selectedRecipients.length
-    }
-  );
-
-}
-
-this.sendRowEvents.set(
-  initialSendEvents
-);
-
-    /* -------------------------------------------------------
-       6. Send POST request
-       ------------------------------------------------------- */
-
-    this.isSending.set(true);
-
-    this.sendStatus.set(
-      'Submitting...'
-    );
-
-    this.sendOperationId.set(null);
-
-    this.sendTotalRows.set(
-      this.selectedRecipients.length
-    );
-
-    this.sendProcessedRows.set(0);
-
-    this.sendSentRows.set(0);
-
-    this.sendFailedRows.set(0);
-
-    this.sendRowEvents.set(
-      new Map<number, SendEvent>()
-    );
-
-
-    this.sendApi
-      .send(request)
-      .subscribe({
-
-        next: response => {
-
-          console.log(
-            'SEND QUEUED:',
-            response
-          );
-
-
-          this.sendOperationId.set(
-            response.operationId
-          );
-
-          this.sendStatus.set(
-            response.status
-          );
-
-          this.sendTotalRows.set(
-            response.totalRows
-          );
-
-
-          /*
-           * The POST only tells us that the operation
-           * was queued.
-           *
-           * The actual progress now comes from SSE.
-           */
-          this.listenToSendEvents(
-            response.operationId
-          );
-
-        },
-
-
-        error: error => {
-
-          console.error(
-            'SEND REQUEST ERROR:',
-            error
-          );
-
-          this.isSending.set(false);
-
-          this.sendStatus.set(
-            null
-          );
-
-          this.sendError.set(
-            this.getHttpErrorMessage(
-              error
-            )
-          );
-
-        }
-
-      });
+    this.showSendConfirmation.set(true);
 
   }
 
+  cancelSendConfirmation(): void {
+    this.showSendConfirmation.set(false);
+  }
+
+  confirmSendEmails(): void {
+    if (this.isSending() || this.selectedRecipients.length === 0) return;
+    this.showSendConfirmation.set(false);
+    const formValue = this.emailForm.getRawValue();
+    const request = {
+      recipients: this.selectedRecipients,
+      email: {
+        subject: formValue.subject,
+        body: formValue.body,
+        attachments: this.buildAttachments()
+      }
+    };
+
+    const initialSendEvents = new Map<number, SendEvent>();
+    for (const recipient of this.selectedRecipients) {
+      initialSendEvents.set(recipient.rowId, {
+        operationId: '', type: 'RowUpdate', rowId: recipient.rowId,
+        status: 'Sending', errors: [], providerMessageId: null,
+        sentRows: null, failedRows: null, totalRows: this.selectedRecipients.length
+      });
+    }
+
+    this.isSending.set(true);
+    this.sendStatus.set('Submitting...');
+    this.sendOperationId.set(null);
+    this.sendTotalRows.set(this.selectedRecipients.length);
+    this.sendProcessedRows.set(0);
+    this.sendSentRows.set(0);
+    this.sendFailedRows.set(0);
+    this.sendRowEvents.set(initialSendEvents);
+
+    this.sendApi.send(request).subscribe({
+      next: response => {
+        this.sendOperationId.set(response.operationId);
+        this.sendStatus.set(response.status);
+        this.sendTotalRows.set(response.totalRows);
+        this.listenToSendEvents(response.operationId);
+      },
+      error: error => {
+        this.isSending.set(false);
+        this.sendStatus.set(null);
+        this.sendError.set(this.getHttpErrorMessage(error));
+      }
+    });
+  }
 
   /* =========================================================
      SSE
@@ -982,9 +974,7 @@ this.sendRowEvents.set(
           );
 
 
-          this.handleSendEvent(
-            event
-          );
+          this.ngZone.run(() => this.handleSendEvent(event));
 
         },
 
@@ -1002,21 +992,15 @@ this.sendRowEvents.set(
            * handleSendEvent() will have set isSending
            * to false.
            */
-          if (this.isSending()) {
-
-            this.isSending.set(
-              false
-            );
-
-            this.sendStatus.set(
-              null
-            );
-
-            this.sendError.set(
-              'The connection to the send operation was lost before completion.'
-            );
-
-          }
+          this.ngZone.run(() => {
+            if (this.isSending()) {
+              this.isSending.set(false);
+              this.sendStatus.set(null);
+              this.sendError.set(
+                'The connection to the send operation was lost before completion.'
+              );
+            }
+          });
 
         },
 
@@ -1663,7 +1647,7 @@ private getTemplateColumnNames(): string[] {
     }
 
 
-    return `${sent} sent, ${failed} failed, ${total} total`;
+    return `${this.sendProcessedRows()} / ${total} processed · ${sent} sent · ${failed} failed`;
 
   }
 

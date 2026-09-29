@@ -4,7 +4,9 @@
 html,
 body {
   height: 100%;
+  width: 100%;
   margin: 0;
+  overflow: hidden;
 }
 
 body {
@@ -12,7 +14,61 @@ body {
 }
 
 app-root {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
   height: 100%;
   min-height: 0;
+  overflow: hidden;
+}
+
+app-send {
+  display: block;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  height: auto;
+  overflow: hidden;
+}
+
+/* Composer additions */
+.email-editor { padding-bottom: 20px; }
+.subject-field { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; font-weight: 500; }
+.editor-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.editor-mode { display: inline-flex; padding: 2px; border: 1px solid #d5d5d5; border-radius: 5px; background: #f5f5f5; }
+.editor-mode button { padding: 5px 9px; border: 0; border-radius: 3px; color: #555; background: transparent; cursor: pointer; font: inherit; font-size: 12px; }
+.editor-mode button.active { background: #fff; color: #111; box-shadow: 0 1px 2px #0002; }
+.source-editor { display: flex; flex-direction: column; gap: 6px; font-weight: 500; }
+.source-editor textarea { min-height: 420px; resize: vertical; padding: 12px; border: 1px solid #ccc; border-radius: 0 0 6px 6px; font: 13px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre; overflow: auto; }
+.source-editor textarea:focus { outline: 2px solid #777; outline-offset: -2px; }
+.attachments-section { margin-top: 8px; padding-top: 8px; border-top: 1px solid #e3e3e3; }
+.attachments-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.attachments-heading h3 { margin: 0; font-size: 14px; }
+.attach-button, .remove-attachment { display: inline-flex; align-items: center; padding: 6px 10px; border: 1px solid #ccc; border-radius: 5px; background: #fff; color: #333; cursor: pointer; font: inherit; font-size: 12px; }
+.attach-button:hover, .remove-attachment:hover { background: #f4f4f4; }
+.attach-button input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+.attach-button:focus-within { outline: 2px solid #555; outline-offset: 2px; }
+.attachment-list { margin: 8px 0 0; padding: 0; list-style: none; border-top: 1px solid #eee; }
+.attachment-list li { display: flex; align-items: center; gap: 12px; padding: 7px 2px; border-bottom: 1px solid #eee; font-size: 13px; }
+.attachment-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.attachment-size { color: #666; white-space: nowrap; }
+.remove-attachment { padding: 4px 8px; }
+.preview-email-meta, .preview-attachments { padding: 8px 14px; border-bottom: 1px solid #eee; color: #555; font-size: 12px; }
+.dialog-backdrop { position: fixed; inset: 0; z-index: 20000; display: grid; place-items: center; padding: 24px; background: #1118; }
+.send-confirmation { width: min(100%, 440px); padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #fff; box-shadow: 0 12px 36px #0003; }
+.send-confirmation h2 { margin: 0 0 16px; font-size: 20px; }
+.send-confirmation dl { margin: 0; }
+.send-confirmation dl > div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid #eee; }
+.send-confirmation dt { color: #666; }
+.send-confirmation dd { margin: 0; font-weight: 500; text-align: right; overflow-wrap: anywhere; }
+.confirmation-warning { color: #9a6700; font-size: 13px; }
+.confirmation-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+.confirmation-actions .send-button { min-width: 0; }
+.send-page button:focus-visible { outline: 2px solid #333; outline-offset: 2px; }
+@media (max-width: 700px) {
+  .attachment-list li { flex-wrap: wrap; }
+  .attachment-name { flex-basis: 100%; }
+  .email-body-label .ql-toolbar { display: flex; flex-wrap: wrap; gap: 2px; }
+  .dialog-backdrop { padding: 12px; }
+  .confirmation-actions { flex-wrap: wrap; }
 }

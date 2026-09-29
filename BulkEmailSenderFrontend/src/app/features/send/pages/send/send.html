@@ -106,12 +106,13 @@
 
         <form [formGroup]="emailForm">
 
-          <label>
-            <span>Subject</span>
+          <div class="subject-field">
+            <label for="email-subject">Subject</label>
             <input
+              id="email-subject"
               type="text"
               formControlName="subject" />
-          </label>
+          </div>
 
           @if (
             emailForm.controls.subject.invalid &&
@@ -123,9 +124,16 @@
           }
 
           <div class="email-body-label">
-            <span>Body</span>
+            <div class="editor-heading">
+              <span>Body</span>
+              <div class="editor-mode" role="group" aria-label="Email body editing mode">
+                <button type="button" [class.active]="sourceMode() === 'visual'" (click)="setSourceMode('visual')">Visual</button>
+                <button type="button" [class.active]="sourceMode() === 'html'" (click)="setSourceMode('html')">HTML</button>
+              </div>
+            </div>
 
-            <quill-editor
+            @if (sourceMode() === 'visual') {
+              <quill-editor
               formControlName="body"
               format="html"
               theme="snow"
@@ -134,7 +142,13 @@
               placeholder="Write your email..."
               (onEditorCreated)="onEditorCreated($event)"
               [styles]="{ height: '420px' }">
-            </quill-editor>
+              </quill-editor>
+            } @else {
+              <div class="source-editor">
+                <label for="email-html-source">Advanced HTML editing</label>
+                <textarea id="email-html-source" [value]="sourceHtml" (input)="sourceHtml = $any($event.target).value" spellcheck="false" aria-label="Email HTML source"></textarea>
+              </div>
+            }
           </div>
 
           @if (
@@ -145,6 +159,30 @@
               Email body is required.
             </div>
           }
+
+          <section class="attachments-section" aria-labelledby="attachments-heading">
+            <div class="attachments-heading">
+              <h3 id="attachments-heading">Attachments</h3>
+              <label class="attach-button">
+                Attach files
+                <input type="file" multiple (change)="onAttachmentsSelected($event)" aria-label="Attach files" />
+              </label>
+            </div>
+            @if (attachmentItems.length > 0) {
+              <ul class="attachment-list">
+                @for (attachment of attachmentItems; track $index) {
+                  <li>
+                    <span class="attachment-name">📄 {{ attachment.fileName }}</span>
+                    <span class="attachment-size">{{ formatFileSize(attachment.size) }}</span>
+                    <button type="button" class="remove-attachment" [attr.aria-label]="'Remove ' + attachment.fileName" (click)="removeAttachment($index)">Remove</button>
+                  </li>
+                }
+              </ul>
+            }
+            @if (attachmentError()) {
+              <p class="validation-error" role="alert">{{ attachmentError() }}</p>
+            }
+          </section>
 
           <div class="template-help">
 
@@ -276,6 +314,12 @@
               </h3>
 
               <div class="preview-email">
+                <div class="preview-email-meta">
+                  <strong>To:</strong> {{ selectedRecipient?.values?.['Email'] || 'Recipient' }}
+                </div>
+                @if (attachmentItems.length > 0) {
+                  <div class="preview-attachments"><strong>Attachments:</strong> {{ previewAttachmentNames }}</div>
+                }
                 <div
                   class="preview-email-content"
                   [innerHTML]="previewResponse()!.email!.htmlBody">
@@ -302,5 +346,25 @@
       </div>
     }
   </section>
+
+  @if (showSendConfirmation()) {
+    <div class="dialog-backdrop" role="presentation">
+      <section class="send-confirmation" role="dialog" aria-modal="true" aria-labelledby="send-confirmation-title">
+        <h2 id="send-confirmation-title">Send email?</h2>
+        <dl>
+          <div><dt>Recipients</dt><dd>{{ selectedRecipients.length }}</dd></div>
+          <div><dt>Subject</dt><dd>{{ emailForm.controls.subject.value }}</dd></div>
+          <div><dt>Attachments</dt><dd>{{ attachmentItems.length }}</dd></div>
+        </dl>
+        @if (recipientInput?.validationErrors?.length) {
+          <p class="confirmation-warning">Recipient validation concerns are present. Review the Data tab before sending.</p>
+        }
+        <div class="confirmation-actions">
+          <button type="button" class="secondary-button" (click)="cancelSendConfirmation()">Cancel</button>
+          <button type="button" class="send-button" (click)="confirmSendEmails()">Send {{ selectedRecipients.length }} Emails</button>
+        </div>
+      </section>
+    </div>
+  }
 
 </section>
