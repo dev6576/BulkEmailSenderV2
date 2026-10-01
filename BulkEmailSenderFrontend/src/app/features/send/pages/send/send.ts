@@ -75,7 +75,7 @@ export class Send {
 
   readonly maxAttachmentFileSize = 10 * 1024 * 1024;
   readonly maxTotalAttachmentSize = 25 * 1024 * 1024;
-  attachmentItems: Array<{ fileName: string; size: number }> = [];
+  attachmentItems = signal<Array<{ fileName: string; size: number }>>([]);
   attachmentError = signal<string | null>(null);
   sourceMode = signal<'visual' | 'html'>('visual');
   sourceHtml = '';
@@ -387,7 +387,7 @@ export class Send {
         this.attachmentError.set(`${file.name} exceeds the 10 MB per-file limit.`);
         continue;
       }
-      if (this.attachmentItems.some(item => item.fileName === file.name && item.size === file.size)) {
+      if (this.attachmentItems().some(item => item.fileName === file.name && item.size === file.size)) {
         continue;
       }
       if (this.totalAttachmentSize + file.size > this.maxTotalAttachmentSize) {
@@ -396,27 +396,28 @@ export class Send {
       }
       try {
         const contentBase64 = await this.readFileAsBase64(file);
-        this.attachmentsArray.push(new FormControl(contentBase64, { nonNullable: true }));
-        this.attachmentItems.push({ fileName: file.name, size: file.size });
+        this.ngZone.run(() => {
+          this.attachmentsArray.push(new FormControl(contentBase64, { nonNullable: true }));
+          this.attachmentItems.update(items => [...items, { fileName: file.name, size: file.size }]);
+        });
       } catch {
-        this.attachmentError.set(`Unable to read ${file.name}. Please try again.`);
+        this.ngZone.run(() => this.attachmentError.set(`Unable to read ${file.name}. Please try again.`));
       }
     }
   }
 
   removeAttachment(index: number): void {
     this.attachmentsArray.removeAt(index);
-    this.attachmentItems.splice(index, 1);
-    this.attachmentItems = [...this.attachmentItems];
+    this.attachmentItems.update(items => items.filter((_, itemIndex) => itemIndex !== index));
     this.attachmentError.set(null);
   }
 
   get totalAttachmentSize(): number {
-    return this.attachmentItems.reduce((total, item) => total + item.size, 0);
+    return this.attachmentItems().reduce((total, item) => total + item.size, 0);
   }
 
   get previewAttachmentNames(): string {
-    return this.attachmentItems.map(item => item.fileName).join(', ');
+    return this.attachmentItems().map(item => item.fileName).join(', ');
   }
 
   formatFileSize(size: number): string {
@@ -442,7 +443,7 @@ export class Send {
   }
 
   private buildAttachments(): EmailAttachmentRequest[] {
-    return this.attachmentItems.map((item, index) => ({
+    return this.attachmentItems().map((item, index) => ({
       fileName: item.fileName,
       contentBase64: this.attachmentsArray.at(index).value
     }));
@@ -771,6 +772,13 @@ export class Send {
       return;
     }
 
+    // Clicking Send can blur an active AG Grid editor. Commit it first so the
+    // selected-recipient snapshot and validation both read the latest cell.
+    if (this.recipientInput) {
+      this.selectedRecipients =
+        this.recipientInput.commitEditingAndGetSelectedRecipients();
+    }
+
 
     /*
      * Clear previous send error.
@@ -838,7 +846,9 @@ export class Send {
      * This ensures the selected rows are validated
      * immediately before sending.
      */
-    await this.recipientInput.validateRows();
+    await this.recipientInput.validateRows(
+      this.getRequiredRecipientFields()
+    );
 
 
     const selectedRowIds =
@@ -1506,27 +1516,20 @@ private getTemplateColumnNames(): string[] {
   const columns =
     new Set<string>();
 
+  // Placeholder validity depends on the imported recipient schema, not on
+  // current row selection. Previewing the first row with no selection must
+  // still recognize fields such as {Name} from the other imported rows.
+  const schemaRecipients = [
+    ...this.recipients,
+    ...this.selectedRecipients,
+    ...(this.selectedRecipient ? [this.selectedRecipient] : [])
+  ];
 
-  /*
-   * The selected recipients are the rows that
-   * will actually be sent.
-   */
-  for (
-    const recipient
-    of this.selectedRecipients
-  ) {
+  for (const recipient of schemaRecipients) {
 
-    for (
-      const column
-      of Object.keys(
-        recipient.values
-      )
-    ) {
-
+    for (const column of Object.keys(recipient.values)) {
       columns.add(column);
-
     }
-
   }
 
 
@@ -1534,6 +1537,26 @@ private getTemplateColumnNames(): string[] {
     ...columns
   ];
 
+}
+
+/** Return recipient columns whose values are needed to send this template. */
+private getRequiredRecipientFields(): string[] {
+  const formValue = this.emailForm.getRawValue();
+  const columns = this.getTemplateColumnNames();
+  const emailColumn = columns.find(column => column.toLowerCase() === 'email');
+  const required = new Set<string>();
+  if (emailColumn) required.add(emailColumn);
+
+  const placeholderPattern = /{([^{}]+)}/g;
+  for (const text of [formValue.subject, formValue.body]) {
+    let match: RegExpExecArray | null;
+    while ((match = placeholderPattern.exec(text)) !== null) {
+      const field = match[1].trim();
+      if (columns.includes(field)) required.add(field);
+    }
+  }
+
+  return [...required];
 }
 
   /* =========================================================

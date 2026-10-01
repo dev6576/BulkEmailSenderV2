@@ -20,6 +20,16 @@ public sealed class SendWorker(
         logger.LogInformation(
             "Send worker started.");
 
+        using (var recoveryScope = scopeFactory.CreateScope())
+        {
+            var recoveryStore = recoveryScope.ServiceProvider.GetRequiredService<SendOperationStore>();
+            // The in-memory queue disappears on process exit. Re-queue database
+            // operations after resetting any rows interrupted in Sending state.
+            await recoveryStore.RecoverInterruptedWorkItemsAsync(stoppingToken);
+            foreach (var pendingOperationId in await recoveryStore.GetRecoverableOperationIdsAsync(stoppingToken))
+                await queue.EnqueueAsync(pendingOperationId, stoppingToken);
+        }
+
         await foreach (var operationId in
             queue.ReadAllAsync(stoppingToken))
         {
@@ -83,16 +93,27 @@ public sealed class SendWorker(
             return;
         }
 
-        var email =
-            JsonSerializer.Deserialize<EmailDefinition>(
-                operation.EmailJson);
+        EmailDefinition? email;
+        try
+        {
+            email = JsonSerializer.Deserialize<EmailDefinition>(operation.EmailJson);
+        }
+        catch (JsonException exception)
+        {
+            // Corrupt persisted email JSON is a poison operation: failing its
+            // pending rows prevents it from being retried and crashing startup
+            // every time the worker encounters it.
+            logger.LogWarning(exception,
+                "Stored email definition for operation {OperationId} is invalid. Marking its pending rows failed.",
+                operationId);
+            await FailPendingRowsAsync(operationStore, operation, cancellationToken);
+            return;
+        }
 
         if (email is null)
         {
-            logger.LogError(
-                "Email definition for operation {OperationId} could not be deserialized.",
-                operationId);
-
+            logger.LogWarning("Stored email definition for operation {OperationId} is empty. Marking its pending rows failed.", operationId);
+            await FailPendingRowsAsync(operationStore, operation, cancellationToken);
             return;
         }
 
@@ -128,9 +149,11 @@ public sealed class SendWorker(
                     workItem.RowId,
                     values);
 
-            await operationStore.MarkWorkItemSendingAsync(
+            // Only call the provider after the atomic database claim succeeds.
+            var claimed = await operationStore.MarkWorkItemSendingAsync(
                 workItem.Id,
                 cancellationToken);
+            if (!claimed) continue;
 
             SendRowResult result;
 
@@ -149,12 +172,13 @@ public sealed class SendWorker(
             }
             catch (Exception exception)
             {
+                logger.LogError("Unexpected row processing failure for operation {OperationId}, row {RowId}; exception type {ExceptionType}.", operationId, recipient.RowId, exception.GetType().Name);
                 result =
                     SendRowResult.Failed(
                         recipient.RowId,
                         GetRecipientEmail(recipient),
                         "UnexpectedError",
-                        exception.Message);
+                        "An unexpected processing error occurred for this recipient.");
             }
 
             if (result.Status == SendRowStatus.Sent)
@@ -162,6 +186,7 @@ public sealed class SendWorker(
                 await operationStore.MarkWorkItemSentAsync(
                     workItem.Id,
                     result.ProviderMessageId,
+                    result.RetryCount,
                     cancellationToken);
             }
             else
@@ -172,6 +197,7 @@ public sealed class SendWorker(
                     "SendFailed",
                     result.ErrorMessage ??
                     "The email could not be sent.",
+                    result.RetryCount,
                     cancellationToken);
             }
 
@@ -197,6 +223,7 @@ public sealed class SendWorker(
 
         if (completedOperation is not null)
         {
+            logger.LogInformation("Send operation {OperationId} completed with {SentRows} sent and {FailedRows} failed.", completedOperation.Id, completedOperation.SentRows, completedOperation.FailedRows);
             broadcaster.Publish(
                 new SendEvent
                 {
@@ -212,6 +239,45 @@ public sealed class SendWorker(
         logger.LogInformation(
             "Send operation {OperationId} finished.",
             operationId);
+    }
+
+    private async Task FailPendingRowsAsync(
+        SendOperationStore operationStore,
+        BulkEmailSender.Api.Data.Entities.SendOperationEntity operation,
+        CancellationToken cancellationToken)
+    {
+        foreach (var item in operation.WorkItems.Where(item =>
+                     item.Status == nameof(SendWorkItemStatus.Pending) ||
+                     item.Status == nameof(SendWorkItemStatus.Sending)))
+        {
+            await operationStore.MarkWorkItemFailedAsync(
+                item.Id,
+                "InvalidStoredEmail",
+                "The stored email content is invalid. Create a new send operation.",
+                item.RetryCount,
+                cancellationToken);
+            broadcaster.Publish(new SendEvent
+            {
+                OperationId = operation.Id,
+                RowId = item.RowId,
+                Status = nameof(SendWorkItemStatus.Failed),
+                Errors = ["InvalidStoredEmail", "The stored email content is invalid. Create a new send operation."]
+            });
+        }
+
+        var completed = await operationStore.CompleteOperationIfFinishedAsync(operation.Id, cancellationToken);
+        if (completed is not null)
+        {
+            broadcaster.Publish(new SendEvent
+            {
+                OperationId = completed.Id,
+                RowId = 0,
+                Status = completed.Status,
+                TotalRows = completed.TotalRows,
+                SentRows = completed.SentRows,
+                FailedRows = completed.FailedRows
+            });
+        }
     }
 
     private static IReadOnlyList<string> BuildErrors(

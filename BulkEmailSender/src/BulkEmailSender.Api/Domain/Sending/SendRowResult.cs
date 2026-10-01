@@ -19,17 +19,23 @@ public sealed class SendRowResult
 
     public string? ErrorMessage { get; init; }
 
+    // Retries after the first attempt are tracked per recipient for diagnostics,
+    // whether the row ultimately succeeds or fails.
+    public int RetryCount { get; init; }
+
     public static SendRowResult Sent(
         long rowId,
         string recipientEmail,
-        string? providerMessageId)
+        string? providerMessageId,
+        int retryCount = 0)
     {
         return new SendRowResult
         {
             RowId = rowId,
             RecipientEmail = recipientEmail,
             Status = SendRowStatus.Sent,
-            ProviderMessageId = providerMessageId
+            ProviderMessageId = providerMessageId,
+            RetryCount = retryCount
         };
     }
 
@@ -51,7 +57,8 @@ public sealed class SendRowResult
         long rowId,
         string recipientEmail,
         string errorCode,
-        string errorMessage)
+        string errorMessage,
+        int retryCount = 0)
     {
         return new SendRowResult
         {
@@ -59,7 +66,8 @@ public sealed class SendRowResult
             RecipientEmail = recipientEmail,
             Status = SendRowStatus.Failed,
             ErrorCode = errorCode,
-            ErrorMessage = errorMessage
+            ErrorMessage = errorMessage,
+            RetryCount = retryCount
         };
     }
 }

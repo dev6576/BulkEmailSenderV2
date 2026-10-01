@@ -46,8 +46,7 @@ app-send {
 .attachments-heading h3 { margin: 0; font-size: 14px; }
 .attach-button, .remove-attachment { display: inline-flex; align-items: center; padding: 6px 10px; border: 1px solid #ccc; border-radius: 5px; background: #fff; color: #333; cursor: pointer; font: inherit; font-size: 12px; }
 .attach-button:hover, .remove-attachment:hover { background: #f4f4f4; }
-.attach-button input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
-.attach-button:focus-within { outline: 2px solid #555; outline-offset: 2px; }
+.attach-button:focus-visible { outline: 2px solid #555; outline-offset: 2px; }
 .attachment-list { margin: 8px 0 0; padding: 0; list-style: none; border-top: 1px solid #eee; }
 .attachment-list li { display: flex; align-items: center; gap: 12px; padding: 7px 2px; border-bottom: 1px solid #eee; font-size: 13px; }
 .attachment-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }

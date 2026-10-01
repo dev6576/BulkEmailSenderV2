@@ -47,7 +47,9 @@ public void Publish(SendEvent sendEvent)
         {
             channel.Writer.TryWrite(sendEvent);
 
-            if (sendEvent.Type == "OperationCompleted")
+            // A terminal event lets each SSE reader finish cleanly rather than
+            // holding an idle connection open after the operation has ended.
+            if (sendEvent.Status == "Completed")
             {
                 channel.Writer.TryComplete();
             }

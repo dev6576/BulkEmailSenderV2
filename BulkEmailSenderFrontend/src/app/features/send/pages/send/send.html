@@ -163,14 +163,14 @@
           <section class="attachments-section" aria-labelledby="attachments-heading">
             <div class="attachments-heading">
               <h3 id="attachments-heading">Attachments</h3>
-              <label class="attach-button">
+              <button type="button" class="attach-button" (click)="attachmentPicker.click()">
                 Attach files
-                <input type="file" multiple (change)="onAttachmentsSelected($event)" aria-label="Attach files" />
-              </label>
+              </button>
+              <input #attachmentPicker type="file" multiple hidden (change)="onAttachmentsSelected($event)" aria-label="Attach files" />
             </div>
-            @if (attachmentItems.length > 0) {
+            @if (attachmentItems().length > 0) {
               <ul class="attachment-list">
-                @for (attachment of attachmentItems; track $index) {
+                @for (attachment of attachmentItems(); track $index) {
                   <li>
                     <span class="attachment-name">📄 {{ attachment.fileName }}</span>
                     <span class="attachment-size">{{ formatFileSize(attachment.size) }}</span>
@@ -317,7 +317,7 @@
                 <div class="preview-email-meta">
                   <strong>To:</strong> {{ selectedRecipient?.values?.['Email'] || 'Recipient' }}
                 </div>
-                @if (attachmentItems.length > 0) {
+                @if (attachmentItems().length > 0) {
                   <div class="preview-attachments"><strong>Attachments:</strong> {{ previewAttachmentNames }}</div>
                 }
                 <div
@@ -354,7 +354,7 @@
         <dl>
           <div><dt>Recipients</dt><dd>{{ selectedRecipients.length }}</dd></div>
           <div><dt>Subject</dt><dd>{{ emailForm.controls.subject.value }}</dd></div>
-          <div><dt>Attachments</dt><dd>{{ attachmentItems.length }}</dd></div>
+          <div><dt>Attachments</dt><dd>{{ attachmentItems().length }}</dd></div>
         </dl>
         @if (recipientInput?.validationErrors?.length) {
           <p class="confirmation-warning">Recipient validation concerns are present. Review the Data tab before sending.</p>

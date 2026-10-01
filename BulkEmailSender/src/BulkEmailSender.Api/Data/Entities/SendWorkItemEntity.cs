@@ -18,6 +18,10 @@ public sealed class SendWorkItemEntity
 
     public DateTimeOffset? CompletedAt { get; set; }
 
+    // Attempts are per recipient, so one failing address does not hide the
+    // retry history of the other rows in this operation.
+    public int RetryCount { get; set; }
+
     public string? ErrorCode { get; set; }
 
     public string? ErrorMessage { get; set; }

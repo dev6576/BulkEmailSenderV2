@@ -17,10 +17,10 @@
       <button
         type="button"
         class="secondary-button"
-        [disabled]="isValidating || gridRows.length === 0"
+        [disabled]="isValidating() || gridRows.length === 0"
         (click)="validateRows()">
 
-        @if (isValidating) {
+        @if (isValidating()) {
           Validating...
         }
         @else {
@@ -110,13 +110,11 @@
        VALIDATION SUMMARY
        ===================================================== -->
 
-  @if (validationErrors.length > 0) {
+  @if (validationSummary) {
 
-    <div class="validation-summary">
+    <div class="validation-summary" [class.has-errors]="validationErrors.length > 0" role="status">
 
-      <strong>
-        {{ validationErrors.length }} row(s) have validation errors.
-      </strong>
+      <strong>{{ validationSummary }}</strong>
 
     </div>
 

@@ -2,6 +2,7 @@ import {
   ChangeDetectorRef,
   Component,
   Input,
+  signal,
   output
 } from '@angular/core';
 
@@ -52,9 +53,23 @@ ModuleRegistry.registerModules([
 
 interface RecipientGridRow {
   rowId: number;
+  sendStatus?: string;
+  sendStatusError?: string;
+  validationStatus?: string;
+  validationErrorsText?: string;
 
-  [key: string]: string | number;
+  [key: string]: string | number | undefined;
 }
+
+// These are AG Grid display fields, not imported recipient columns. Keeping
+// them out of the recipient schema prevents previews/sends from receiving
+// grid bookkeeping as merge-field data.
+const GRID_ONLY_FIELDS = new Set([
+  'sendStatus',
+  'sendStatusError',
+  'validationStatus',
+  'validationErrorsText'
+]);
 
 
 /* =========================================================
@@ -148,7 +163,9 @@ export class RecipientInput {
 
   showAddColumnInput = false;
 
-  isValidating = false;
+  // Keep this UI state reactive even when an async validation yield resumes
+  // outside Angular's normal event turn.
+  isValidating = signal(false);
 
   isImportingCsv = false;
 
@@ -165,6 +182,8 @@ export class RecipientInput {
 
   validationErrors:
     RecipientValidationError[] = [];
+
+  validationSummary: string | null = null;
 
 
   /* =======================================================
@@ -196,6 +215,15 @@ export class RecipientInput {
 
     this.emitSelectedRecipients();
 
+  }
+
+  /** Commit an in-progress cell edit before send validation reads the rows. */
+  commitEditingAndGetSelectedRecipients(): Recipient[] {
+    this.gridApi?.stopEditing();
+    const recipients = (this.gridApi?.getSelectedRows() ?? [])
+      .map(row => this.toRecipient(row));
+    this.selectedRecipientsChanged.emit(recipients);
+    return recipients;
   }
 
 
@@ -255,16 +283,7 @@ export class RecipientInput {
           return '';
         }
 
-        const event =
-          this.sendRowEvents.get(
-            params.data.rowId
-          );
-
-        if (!event) {
-          return '';
-        }
-
-        return event.status;
+        return params.data.sendStatus ?? '';
 
       },
 
@@ -274,96 +293,64 @@ export class RecipientInput {
             ICellRendererParams<RecipientGridRow>
         ) => {
 
+          const renderStatus = (
+            text: string,
+            className: string,
+            icon?: string,
+            title?: string
+          ): HTMLElement => {
+            const container = document.createElement('div');
+            container.className = `send-status-cell ${className}`.trim();
+            if (title) container.title = title;
+            if (icon) {
+              const iconElement = document.createElement('span');
+              iconElement.className = 'send-status-icon';
+              iconElement.textContent = icon;
+              container.appendChild(iconElement);
+            }
+            const label = document.createElement('span');
+            label.textContent = text;
+            container.appendChild(label);
+            return container;
+          };
+
           const row =
             params.data;
 
           if (!row) {
-            return '';
+            return null;
           }
 
-          const event =
-            this.sendRowEvents.get(
-              row.rowId
-            );
-
-          if (!event) {
-            return '';
+          if (!row.sendStatus) {
+            return null;
           }
 
-          const status =
-            event.status;
+          const status = row.sendStatus;
 
 
           if (status === 'Sent') {
-
-            return `
-              <div
-                class="send-status-cell send-status-success">
-
-                <span class="send-status-icon">
-                  ✓
-                </span>
-
-                <span>
-                  Sent
-                </span>
-
-              </div>
-            `;
+            return renderStatus('Sent', 'send-status-success', '✓');
 
           }
 
 
           if (status === 'Failed') {
 
-            const errorText =
-              event.errors.length > 0
-                ? event.errors.join('\n')
-                : 'The email could not be sent.';
+            const errorText = row.sendStatusError || 'The email could not be sent.';
 
-            return `
-              <div
-                class="send-status-cell send-status-failed"
-                title="${this.escapeHtml(errorText)}">
-
-                <span class="send-status-icon">
-                  ⚠
-                </span>
-
-                <span>
-                  Failed
-                </span>
-
-              </div>
-            `;
+            return renderStatus('Failed', 'send-status-failed', '⚠', errorText);
 
           }
 
 
           if (status === 'Sending') {
 
-            return `
-              <div
-                class="send-status-cell send-status-sending">
-
-                <span>
-                  Sending...
-                </span>
-
-              </div>
-            `;
+            return renderStatus('Sending...', 'send-status-sending');
 
           }
 
 
-          return `
-            <div
-              class="send-status-cell">
-
-              ${this.escapeHtml(status)}
-
-            </div>
-          `;
+          return renderStatus(status, '');
 
         }
 
@@ -402,14 +389,19 @@ export class RecipientInput {
   }
 
 
-  const affectedRows = [...sendRowEvents.keys()]
-    .map(rowId => this.gridApi!.getRowNode(String(rowId)))
-    .filter((node): node is NonNullable<typeof node> => !!node);
+  // Keep status in AG Grid's row data so the grid's row update lifecycle
+  // refreshes the visible cell without requiring a manual edit.
+  const changedRows = this.gridRows
+    .filter(row => sendRowEvents.has(row.rowId))
+    .map(row => {
+      const event = sendRowEvents.get(row.rowId)!;
+      return { ...row, sendStatus: event.status, sendStatusError: event.errors.join('\n') };
+    });
 
-  if (affectedRows.length > 0) {
-    // Renderer output depends on the external event map, so redraw these rows
-    // explicitly after every SSE update instead of changing recipient row data.
-    this.gridApi.redrawRows({ rowNodes: affectedRows });
+  if (changedRows.length > 0) {
+    const changedById = new Map(changedRows.map(row => [row.rowId, row]));
+    this.gridRows = this.gridRows.map(row => changedById.get(row.rowId) ?? row);
+    this.gridApi.applyTransaction({ update: changedRows });
   }
 
 
@@ -426,37 +418,18 @@ export class RecipientInput {
      ======================================================= */
 
   private getDataColumns(): string[] {
-
-    const columns =
-      new Set<string>();
-
-
-    for (
-      const row
-      of this.gridRows
-    ) {
-
-      for (
-        const key
-        of Object.keys(row)
-      ) {
-
-        if (
-          key !== 'rowId'
-        ) {
-
-          columns.add(key);
-
-        }
-
-      }
-
+    // Imported and manually-created rows share the same schema. Reading the
+    // first row avoids rescanning every recipient just to rediscover columns.
+    const firstRow = this.gridRows[0];
+    if (firstRow) {
+      return Object.keys(firstRow)
+        .filter(key => key !== 'rowId' && !GRID_ONLY_FIELDS.has(key));
     }
 
-
-    return [
-      ...columns
-    ];
+    // Preserve known columns after the final row is removed.
+    return this.columnDefs
+      .map(column => column.field)
+      .filter((field): field is string => typeof field === 'string' && field !== 'rowId');
 
   }
 
@@ -550,6 +523,8 @@ export class RecipientInput {
 
     }
 
+    this.validationSummary = null;
+
 
     /*
      * Add the new column to every existing row.
@@ -597,6 +572,8 @@ export class RecipientInput {
      ======================================================= */
 
   addRow(): void {
+
+    this.validationSummary = null;
 
     const rowId =
       this.getNextRowId();
@@ -662,6 +639,8 @@ export class RecipientInput {
   private removeRow(
     rowId: number
   ): void {
+
+    this.validationSummary = null;
 
     this.gridRows =
       this.gridRows.filter(
@@ -776,6 +755,8 @@ export class RecipientInput {
     if (!event.data) {
       return;
     }
+
+    this.validationSummary = null;
 
 
     /*
@@ -932,37 +913,48 @@ export class RecipientInput {
      VALIDATION
      ======================================================= */
 
-  async validateRows(): Promise<void> {
+  async validateRows(requiredColumns?: string[]): Promise<void> {
 
-    if (this.isValidating) {
+    if (this.isValidating()) {
       return;
     }
 
 
-    this.isValidating =
-      true;
+    this.isValidating.set(true);
+    this.changeDetectorRef.detectChanges();
 
 
-    /*
-     * Existing row validation logic should
-     * populate validationState and validationErrors.
-     *
-     * This method deliberately remains explicit;
-     * validation is not performed while typing.
-     */
+    // Keep this as an explicit action so large sheets are not revalidated
+    // while the user is still editing cells.
     try {
+
+      // Let Angular paint the loading label before doing any CPU work.
+      await new Promise<void>(resolve => setTimeout(resolve, 0));
 
       this.validationState.clear();
 
       this.validatedRows.clear();
 
       this.validationErrors = [];
+      this.validationSummary = null;
 
+      // Column names are the same for every row. Compute them once; looking
+      // them up by scanning all rows inside this loop made validation quadratic.
+      const dataColumns = this.getDataColumns();
+      const emailColumn = dataColumns.find(column => column.toLowerCase() === 'email');
+      // Send validation only requires values that the message uses plus Email;
+      // the standalone Validate Rows action still checks every data column.
+      const columnsToRequire = requiredColumns
+        ? new Set(requiredColumns.map(column => column.toLowerCase()))
+        : new Set(dataColumns.map(column => column.toLowerCase()));
 
-      for (
-        const row
-        of this.gridRows
-      ) {
+      for (let rowIndex = 0; rowIndex < this.gridRows.length; rowIndex++) {
+        // Yield occasionally so a large imported sheet does not freeze the UI.
+        if (rowIndex > 0 && rowIndex % 250 === 0) {
+          await new Promise<void>(resolve => setTimeout(resolve, 0));
+        }
+
+        const row = this.gridRows[rowIndex];
 
         const errors:
           string[] = [];
@@ -970,8 +962,12 @@ export class RecipientInput {
 
         for (
           const column
-          of this.getDataColumns()
+          of dataColumns
         ) {
+
+          if (!columnsToRequire.has(column.toLowerCase())) {
+            continue;
+          }
 
           const value =
             String(
@@ -987,6 +983,15 @@ export class RecipientInput {
 
           }
 
+        }
+
+        if (!emailColumn) {
+          errors.push('Email column is required.');
+        } else {
+          const email = String(row[emailColumn] ?? '').trim();
+          if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            errors.push('Email address is not valid.');
+          }
         }
 
 
@@ -1018,16 +1023,38 @@ export class RecipientInput {
 
       }
 
+      const invalidRows = this.validationErrors.length;
+      this.validationSummary = invalidRows === 0
+        ? `All ${this.gridRows.length} recipient row(s) passed validation.`
+        : `Validation complete: ${invalidRows} row(s) need attention. See the Validation column.`;
 
-      this.refreshGrid(
-        true
-      );
 
+      // Store results in row data and submit immutable row updates through
+      // AG Grid so its own row lifecycle refreshes the visible cells.
+      const validatedRows = this.gridRows.map(row => {
+        const errors = this.validationState.get(row.rowId);
+        if (!errors) return row;
+        return {
+          ...row,
+          validationStatus: errors.length === 0 ? 'Valid' : `${errors.length} error(s)`,
+          validationErrorsText: errors.join('\n')
+        };
+      });
+      this.gridRows = validatedRows;
+      if (this.gridApi && validatedRows.length > 0) {
+        this.gridApi.applyTransaction({ update: validatedRows });
+      }
+      this.changeDetectorRef.detectChanges();
+
+    }
+    catch (error) {
+      console.error('Recipient row validation failed:', error);
+      this.validationSummary = 'Validation could not complete. Please try again.';
     }
     finally {
 
-      this.isValidating =
-        false;
+      this.isValidating.set(false);
+      this.changeDetectorRef.detectChanges();
 
     }
 
@@ -1060,23 +1087,7 @@ export class RecipientInput {
         }
 
 
-        const errors =
-          this.validationState.get(
-            params.data.rowId
-          );
-
-
-        if (
-          !errors ||
-          errors.length === 0
-        ) {
-
-          return '';
-
-        }
-
-
-        return `${errors.length} error(s)`;
+        return params.data.validationStatus ?? '';
 
       },
 
@@ -1091,37 +1102,26 @@ export class RecipientInput {
           }
 
 
-          const errors =
-            this.validationState.get(
-              params.data.rowId
-            );
-
-
-          if (
-            !errors ||
-            errors.length === 0
-          ) {
-
+          if (params.data.validationStatus === undefined) {
             return '';
-
           }
 
+          // Returning an HTMLElement makes this a real AG Grid renderer;
+          // returning an HTML-looking string displays markup as plain text.
+          const container = document.createElement('div');
+          const icon = document.createElement('span');
+          const message = document.createElement('span');
+          const isValid = params.data.validationStatus === 'Valid';
 
-          return `
-            <div
-              class="validation-error-cell"
-              title="${this.escapeHtml(errors.join('\n'))}">
+          container.className = `validation-cell ${isValid ? 'validation-cell-success' : 'validation-cell-warning'}`;
+          container.title = isValid ? 'This row passed validation.' : (params.data.validationErrorsText ?? 'Validation failed.');
+          icon.className = isValid ? 'validation-success' : 'validation-warning';
+          icon.textContent = isValid ? '✓' : '⚠';
+          message.className = 'validation-message';
+          message.textContent = params.data.validationStatus!;
+          container.append(icon, message);
 
-              <span>
-                ⚠
-              </span>
-
-              <span>
-                ${errors.length} error(s)
-              </span>
-
-            </div>
-          `;
+          return container;
 
         }
 
@@ -1339,6 +1339,7 @@ export class RecipientInput {
           this.validatedRows.clear();
 
           this.validationErrors = [];
+          this.validationSummary = null;
 
 
           this.rebuildColumns();

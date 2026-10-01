@@ -2,9 +2,12 @@ namespace BulkEmailSender.Api.Contracts;
 
 public sealed class EmailAttachmentRequest
 {
-    public required string FileName { get; init; }
+    public string? FileName { get; init; }
 
-    public required string ContentType { get; init; }
+    public string? ContentType { get; init; }
 
-    public required byte[] Content { get; init; }
+    public string? ContentBase64 { get; init; }
+
+    // Kept for compatibility with the original System.Text.Json byte[] contract.
+    public byte[]? Content { get; init; }
 }

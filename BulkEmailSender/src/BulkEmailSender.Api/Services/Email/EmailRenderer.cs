@@ -35,7 +35,7 @@ public sealed class EmailRenderer
         }
 
         var subject =
-            _templateRenderer.Render(
+            _templateRenderer.RenderText(
                 email.Subject,
                 recipient.Values);
 

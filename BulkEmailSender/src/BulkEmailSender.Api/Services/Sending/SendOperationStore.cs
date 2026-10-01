@@ -32,6 +32,11 @@ public sealed class SendOperationStore
                 Status = nameof(SendOperationStatus.Queued),
                 TotalRows = recipients.Count,
                 EmailJson = JsonSerializer.Serialize(email),
+                // Keep attachment data in its dedicated operation column as
+                // well as in EmailJson: the dedicated snapshot makes the
+                // queued operation's attachments directly inspectable without
+                // deserializing the complete email definition.
+                AttachmentsJson = JsonSerializer.Serialize(email.Attachments),
                 Body= email.Body,
                 Subject= email.Subject
             };
@@ -55,6 +60,11 @@ public sealed class SendOperationStore
 
         await _db.SaveChangesAsync(
             cancellationToken);
+
+        // This scoped context is reused while the background worker handles
+        // the queued operation. Detach the returned entity graph so later reads
+        // see worker updates instead of this newly-created, stale snapshot.
+        _db.ChangeTracker.Clear();
 
         return new SendOperation
         {
@@ -93,41 +103,35 @@ public sealed class SendOperationStore
             return;
         }
 
+        if (operation.Status == nameof(SendOperationStatus.Completed)) return;
         operation.Status =
             nameof(SendOperationStatus.Running);
+        operation.StartedAt ??= DateTimeOffset.UtcNow;
 
         await _db.SaveChangesAsync(
             cancellationToken);
     }
 
-    public async Task MarkWorkItemSendingAsync(
+    public async Task<bool> MarkWorkItemSendingAsync(
         long workItemId,
         CancellationToken cancellationToken)
     {
-        var workItem =
-            await _db.SendWorkItems
-                .SingleOrDefaultAsync(
-                    item => item.Id == workItemId,
-                    cancellationToken);
-
-        if (workItem is null)
-        {
-            return;
-        }
-
-        workItem.Status =
-            nameof(SendWorkItemStatus.Sending);
-
-        workItem.StartedAt =
-            DateTimeOffset.UtcNow;
-
-        await _db.SaveChangesAsync(
-            cancellationToken);
+        var startedAt = DateTimeOffset.UtcNow;
+        // Claim with one conditional UPDATE: if another worker already changed
+        // Pending, zero rows are updated and that worker owns this recipient.
+        // Capture the timestamp first so EF Core can bind it as a SQL parameter.
+        var updated = await _db.SendWorkItems
+            .Where(item => item.Id == workItemId && item.Status == nameof(SendWorkItemStatus.Pending))
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(item => item.Status, nameof(SendWorkItemStatus.Sending))
+                .SetProperty(item => item.StartedAt, startedAt), cancellationToken);
+        return updated == 1;
     }
 
     public async Task MarkWorkItemSentAsync(
         long workItemId,
         string? providerMessageId,
+        int retryCount,
         CancellationToken cancellationToken)
     {
         var workItem =
@@ -142,6 +146,8 @@ public sealed class SendOperationStore
         }
 
         // Idempotency guard.
+        // A retried operation can revisit completed items; don't increment its
+        // parent totals twice or overwrite the original provider result.
         if (workItem.Status ==
             nameof(SendWorkItemStatus.Sent))
         {
@@ -153,6 +159,7 @@ public sealed class SendOperationStore
 
         workItem.ProviderMessageId =
             providerMessageId;
+        workItem.RetryCount = retryCount;
 
         workItem.ErrorCode = null;
         workItem.ErrorMessage = null;
@@ -180,6 +187,7 @@ public sealed class SendOperationStore
         long workItemId,
         string errorCode,
         string errorMessage,
+        int retryCount,
         CancellationToken cancellationToken)
     {
         var workItem =
@@ -194,6 +202,8 @@ public sealed class SendOperationStore
         }
 
         // Idempotency guard.
+        // Keep terminal failure writes idempotent for the same reason as sent
+        // writes: operation counters represent unique rows, not attempts.
         if (workItem.Status ==
             nameof(SendWorkItemStatus.Failed))
         {
@@ -208,6 +218,7 @@ public sealed class SendOperationStore
 
         workItem.ErrorMessage =
             errorMessage;
+        workItem.RetryCount = retryCount;
 
         workItem.ProviderMessageId = null;
 
@@ -246,10 +257,14 @@ public sealed class SendOperationStore
             return null;
         }
 
+        if (operation.Status == nameof(SendOperationStatus.Completed)) return null;
+
         var completedRows =
             operation.SentRows +
             operation.FailedRows;
 
+        // Mark an operation complete only after every recipient has a terminal
+        // result; this also leaves interrupted work eligible for recovery.
         if (completedRows < operation.TotalRows)
         {
             return null;
@@ -257,11 +272,32 @@ public sealed class SendOperationStore
 
         operation.Status =
             nameof(SendOperationStatus.Completed);
+        operation.CompletedAt = DateTimeOffset.UtcNow;
 
         await _db.SaveChangesAsync(
             cancellationToken);
 
         return operation;
+    }
+
+    public async Task<IReadOnlyList<Guid>> GetRecoverableOperationIdsAsync(CancellationToken cancellationToken)
+    {
+        return await _db.SendOperations
+            .Where(operation => operation.Status == nameof(SendOperationStatus.Queued) || operation.Status == nameof(SendOperationStatus.Running))
+            .Select(operation => operation.Id)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task RecoverInterruptedWorkItemsAsync(CancellationToken cancellationToken)
+    {
+        // A process may stop after claiming a row but before recording its
+        // outcome. Return those claims to Pending so startup recovery can retry.
+        await _db.SendWorkItems
+            .Where(item => item.Status == nameof(SendWorkItemStatus.Sending))
+            .ExecuteUpdateAsync(setters => setters.SetProperty(item => item.Status, nameof(SendWorkItemStatus.Pending)), cancellationToken);
+        await _db.SendOperations
+            .Where(operation => operation.Status == nameof(SendOperationStatus.Running))
+            .ExecuteUpdateAsync(setters => setters.SetProperty(operation => operation.Status, nameof(SendOperationStatus.Queued)), cancellationToken);
     }
     public async Task<IReadOnlyList<SendEvent>>
         GetCompletedEventsAsync(

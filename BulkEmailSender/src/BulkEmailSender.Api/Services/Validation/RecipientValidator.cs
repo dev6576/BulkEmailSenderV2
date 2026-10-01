@@ -10,8 +10,11 @@ public sealed class RecipientValidator
     {
         var result = new ValidationResult();
 
-        if (!recipient.Values.TryGetValue("Email", out var email) ||
-            string.IsNullOrWhiteSpace(email))
+        // Spreadsheet headers commonly vary in capitalization, so identify the
+        // required Email column without requiring an exact-case header match.
+        var email = recipient.Values.FirstOrDefault(pair =>
+            pair.Key.Equals("Email", StringComparison.OrdinalIgnoreCase)).Value;
+        if (string.IsNullOrWhiteSpace(email))
         {
             result.Add(
                 "MissingEmail",

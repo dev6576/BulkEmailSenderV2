@@ -10,6 +10,10 @@ public sealed class EmailSendResult
 
     public string? ErrorMessage { get; init; }
 
+    // The orchestrator retries only explicitly transient failures; invalid
+    // input and permanent provider rejections should not be repeated.
+    public bool IsTransientFailure { get; init; }
+
     public static EmailSendResult Success(
         string? providerMessageId = null)
     {
@@ -22,13 +26,15 @@ public sealed class EmailSendResult
 
     public static EmailSendResult Failure(
         string errorCode,
-        string errorMessage)
+        string errorMessage,
+        bool isTransientFailure = false)
     {
         return new EmailSendResult
         {
             IsSuccess = false,
             ErrorCode = errorCode,
-            ErrorMessage = errorMessage
+            ErrorMessage = errorMessage,
+            IsTransientFailure = isTransientFailure
         };
     }
 }
