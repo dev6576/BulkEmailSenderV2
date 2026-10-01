@@ -843,3 +843,8 @@ code {
     flex-basis: 44px;
   }
 }
+.send-readiness {
+  margin: -8px 0 12px;
+  color: #667085;
+  font-size: 13px;
+}

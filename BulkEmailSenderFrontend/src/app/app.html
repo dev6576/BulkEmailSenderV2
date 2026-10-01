@@ -1,1 +1,17 @@
+<header class="app-header">
+  <a class="app-brand" routerLink="/">Bulk Email Sender</a>
+  <div class="gmail-status" aria-live="polite">
+    <span class="gmail-dot" [class.connected]="auth.status().connected" [class.loading]="auth.loading()"></span>
+    @if (auth.loading()) {
+      <span>Checking Gmail…</span>
+    } @else if (auth.status().connected) {
+      <span><strong>Connected to Gmail</strong><small>{{ auth.status().emailAddress }}</small></span>
+      <button type="button" class="gmail-button secondary" (click)="disconnect()">Disconnect</button>
+    } @else {
+      <span>Gmail not connected</span>
+      <button type="button" class="gmail-button" (click)="auth.connect()">Connect Gmail</button>
+    }
+  </div>
+</header>
+@if (auth.error()) { <div class="auth-notice" role="status">{{ auth.error() }}</div> }
 <router-outlet></router-outlet>

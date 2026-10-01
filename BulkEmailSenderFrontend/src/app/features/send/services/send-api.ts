@@ -83,6 +83,7 @@ export class SendApiService {
 
         const eventSource =
           new EventSource(url);
+        let operationCompleted = false;
 
 
         /*
@@ -174,6 +175,10 @@ export class SendApiService {
 
               };
 
+            if (sendEvent.status === 'Completed') {
+              operationCompleted = true;
+            }
+
 
             console.log(
               'Parsed SSE event:',
@@ -231,6 +236,12 @@ export class SendApiService {
         eventSource.onerror = (
           error
         ): void => {
+
+          if (operationCompleted) {
+            eventSource.close();
+            subscriber.complete();
+            return;
+          }
 
           console.error(
             'SSE connection error:',

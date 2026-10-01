@@ -31,6 +31,7 @@ import QuillResize from 'quill-resize-module';
 import {
   SendApiService
 } from '../../services/send-api';
+import { AuthService } from '../../../auth/auth.service';
 
 import {
   PreviewResponse,
@@ -83,6 +84,7 @@ export class Send {
 
   private readonly sendApi =
     inject(SendApiService);
+  readonly auth = inject(AuthService);
 
   private readonly ngZone =
     inject(NgZone);
@@ -767,6 +769,11 @@ export class Send {
      ========================================================= */
 
   async sendEmails(): Promise<void> {
+
+    if (!this.auth.status().connected) {
+      this.sendError.set('Connect Gmail before sending email.');
+      return;
+    }
 
     if (this.isSending()) {
       return;

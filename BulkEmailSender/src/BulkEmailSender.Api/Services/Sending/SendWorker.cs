@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using BulkEmailSender.Api.Domain.Email;
 using BulkEmailSender.Api.Domain.Sending;
+using BulkEmailSender.Api.Services.Auth;
 
 namespace BulkEmailSender.Api.Services.Sending;
 
@@ -153,6 +154,9 @@ public sealed class SendWorker(
             var claimed = await operationStore.MarkWorkItemSendingAsync(
                 workItem.Id,
                 cancellationToken);
+
+        if (operation is not null)
+            scope.ServiceProvider.GetRequiredService<ICurrentUserService>().SetUserId(operation.UserId);
             if (!claimed) continue;
 
             SendRowResult result;

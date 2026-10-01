@@ -3,6 +3,7 @@ namespace BulkEmailSender.Api.Data.Entities;
 public sealed class SendOperationEntity
 {
     public Guid Id { get; set; }
+    public string UserId { get; set; } = null!;
 
     public DateTimeOffset CreatedAt { get; set; }
 

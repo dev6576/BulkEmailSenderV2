@@ -17,6 +17,34 @@ namespace BulkEmailSender.Api.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.20");
 
+            modelBuilder.Entity("BulkEmailSender.Api.Data.Entities.GoogleOAuthConnectionEntity", b =>
+                {
+                    b.Property<string>("UserId").HasColumnType("TEXT");
+                    b.Property<string>("AccessTokenProtected").IsRequired().HasColumnType("TEXT");
+                    b.Property<DateTimeOffset>("AccessTokenExpiresAtUtc").HasColumnType("TEXT");
+                    b.Property<DateTimeOffset>("CreatedAtUtc").HasColumnType("TEXT");
+                    b.Property<string>("EmailAddress").IsRequired().HasColumnType("TEXT");
+                    b.Property<string>("GoogleSubjectId").IsRequired().HasColumnType("TEXT");
+                    b.Property<bool>("IsActive").HasColumnType("INTEGER");
+                    b.Property<DateTimeOffset?>("RevokedAtUtc").HasColumnType("TEXT");
+                    b.Property<string>("RefreshTokenProtected").HasColumnType("TEXT");
+                    b.Property<string>("Scope").IsRequired().HasColumnType("TEXT");
+                    b.Property<DateTimeOffset>("UpdatedAtUtc").HasColumnType("TEXT");
+                    b.HasKey("UserId");
+                    b.HasIndex("GoogleSubjectId");
+                    b.ToTable("GoogleOAuthConnections");
+                });
+
+            modelBuilder.Entity("BulkEmailSender.Api.Data.Entities.GoogleOAuthStateEntity", b =>
+                {
+                    b.Property<string>("StateHash").HasColumnType("TEXT");
+                    b.Property<DateTimeOffset>("ExpiresAtUtc").HasColumnType("TEXT");
+                    b.Property<string>("UserId").IsRequired().HasColumnType("TEXT");
+                    b.HasKey("StateHash");
+                    b.HasIndex("ExpiresAtUtc");
+                    b.ToTable("GoogleOAuthStates");
+                });
+
             modelBuilder.Entity("BulkEmailSender.Api.Data.Entities.SendOperationEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -60,6 +88,10 @@ namespace BulkEmailSender.Api.Migrations
 
                     b.Property<int>("TotalRows")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 

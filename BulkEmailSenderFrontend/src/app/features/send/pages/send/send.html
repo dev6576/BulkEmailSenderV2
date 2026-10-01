@@ -49,6 +49,7 @@
           class="send-button"
           [disabled]="
             isSending() ||
+            !auth.status().connected ||
             selectedRecipients.length === 0
           "
           (click)="sendEmails()">
@@ -59,6 +60,16 @@
           }
         </button>
       </div>
+
+      @if (auth.loading()) {
+        <p class="send-readiness" role="status">Checking Gmail connection…</p>
+      } @else if (!auth.status().connected) {
+        <p class="send-readiness" role="status">Connect Gmail in the header to enable sending.</p>
+      } @else if (recipients.length === 0) {
+        <p class="send-readiness" role="status">Add recipients or import a file before sending.</p>
+      } @else if (selectedRecipients.length === 0) {
+        <p class="send-readiness" role="status">Select one or more recipient rows using the checkboxes to enable sending.</p>
+      }
 
       @if (hasSendProgress) {
         <div class="send-progress-panel">

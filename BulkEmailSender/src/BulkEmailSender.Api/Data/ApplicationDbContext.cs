@@ -12,11 +12,26 @@ public class ApplicationDbContext(
 
     public DbSet<SendWorkItemEntity> SendWorkItems =>
         Set<SendWorkItemEntity>();
+    public DbSet<GoogleOAuthConnectionEntity> GoogleOAuthConnections => Set<GoogleOAuthConnectionEntity>();
+    public DbSet<GoogleOAuthStateEntity> GoogleOAuthStates => Set<GoogleOAuthStateEntity>();
 
     protected override void OnModelCreating(
         ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<GoogleOAuthConnectionEntity>(entity =>
+        {
+            entity.HasKey(x => x.UserId);
+            entity.HasIndex(x => x.GoogleSubjectId);
+            entity.Property(x => x.EmailAddress).IsRequired();
+            entity.Property(x => x.AccessTokenProtected).IsRequired();
+        });
+        modelBuilder.Entity<GoogleOAuthStateEntity>(entity =>
+        {
+            entity.HasKey(x => x.StateHash);
+            entity.HasIndex(x => x.ExpiresAtUtc);
+        });
 
         modelBuilder.Entity<SendOperationEntity>(
             entity =>

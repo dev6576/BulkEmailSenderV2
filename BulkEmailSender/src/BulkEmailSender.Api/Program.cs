@@ -10,6 +10,9 @@ using BulkEmailSender.Api.Services.Sending;
 
 using System.Text.Json;
 using Microsoft.AspNetCore.Http.Features;
+using BulkEmailSender.Api.Services.Auth;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 // Avoid registering the Windows Event Log provider in environments where the
@@ -27,8 +30,17 @@ builder.Services.AddSingleton<SendRetryOptions>(sp =>
 builder.Services.AddSingleton<EmailAttachmentRequestValidator>();
 builder.Services.AddSingleton<SendRequestValidator>();
 builder.Services.AddSingleton<EmailRenderer>();
-builder.Services.AddSingleton<IEmailProvider, StubEmailProvider>();
-builder.Services.AddSingleton<SendOrchestrator>();
+builder.Services.AddDataProtection();
+builder.Services.Configure<GoogleOAuthOptions>(builder.Configuration.GetSection("GoogleOAuth"));
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddHttpClient("google-oauth");
+builder.Services.AddHttpClient("google-api");
+builder.Services.AddHttpClient("gmail-api");
+builder.Services.AddScoped<ICurrentUserService, BrowserSessionUserService>();
+builder.Services.AddScoped<GoogleCredentialService>();
+builder.Services.AddScoped<GoogleOAuthService>();
+builder.Services.AddScoped<IEmailProvider, GmailEmailProvider>();
+builder.Services.AddScoped<SendOrchestrator>();
 builder.Services.AddScoped<SendOperationStore>();
 builder.Services.AddHostedService<SendWorker>();
 builder.Services.AddSingleton<ISendQueue, InMemorySendQueue>();
@@ -43,6 +55,27 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 var app = builder.Build();
 
+var sessionProtector = app.Services.GetRequiredService<IDataProtectionProvider>().CreateProtector("BulkEmailSender.BrowserSession.v1");
+app.Use(async (context, next) =>
+{
+    string? userId = null;
+    if (context.Request.Cookies.TryGetValue(BrowserSessionUserService.CookieName, out var protectedId))
+    {
+        try { userId = sessionProtector.Unprotect(protectedId); } catch (System.Security.Cryptography.CryptographicException) { }
+    }
+    if (string.IsNullOrWhiteSpace(userId))
+    {
+        userId = Guid.NewGuid().ToString("N");
+        context.Response.Cookies.Append(BrowserSessionUserService.CookieName, sessionProtector.Protect(userId), new CookieOptions
+        {
+            HttpOnly = true, Secure = context.Request.IsHttps, SameSite = SameSiteMode.Lax,
+            IsEssential = true, MaxAge = TimeSpan.FromDays(30), Path = "/"
+        });
+    }
+    context.Items[BrowserSessionUserService.CookieName] = userId;
+    await next();
+});
+
 // Attachments are Base64 inside JSON, so the default request ceiling may
 // reject a valid upload before per-file and combined-size validation runs.
 var maxRequestBytes = app.Configuration.GetValue<long>("Email:MaxRequestBodyBytes", 36L * 1024 * 1024);
@@ -54,6 +87,37 @@ app.Use(async (context, next) =>
 });
 
 app.UseHttpsRedirection();
+
+app.MapGet("/api/auth/google", async (GoogleOAuthService oauth, IOptions<GoogleOAuthOptions> options, CancellationToken ct) =>
+{
+    if (string.IsNullOrWhiteSpace(options.Value.ClientId) || string.IsNullOrWhiteSpace(options.Value.ClientSecret))
+        return Results.Problem("Google OAuth is not configured on the server.", statusCode: 503);
+    return Results.Redirect(await oauth.CreateAuthorizationUrlAsync(ct));
+});
+
+app.MapGet("/api/auth/google/callback", async (HttpRequest request, GoogleOAuthService oauth, IOptions<GoogleOAuthOptions> options, CancellationToken ct) =>
+{
+    var destination = options.Value.AngularReturnUri;
+    var error = request.Query["error"].ToString();
+    if (!string.IsNullOrEmpty(error)) return Results.Redirect(AddResult(destination, "error", "authorization_denied"));
+    var code = request.Query["code"].ToString();
+    var state = request.Query["state"].ToString();
+    if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(state)) return Results.Redirect(AddResult(destination, "error", "invalid_callback"));
+    try
+    {
+        var success = await oauth.CompleteAsync(code, state, ct);
+        return Results.Redirect(AddResult(destination, "gmail", success ? "connected" : "invalid_state"));
+    }
+    catch (HttpRequestException) { return Results.Redirect(AddResult(destination, "error", "token_exchange_failed")); }
+    catch (InvalidOperationException) { return Results.Redirect(AddResult(destination, "error", "token_exchange_failed")); }
+});
+
+app.MapGet("/api/auth/status", async (GoogleCredentialService credentials, CancellationToken ct) => Results.Ok(await credentials.GetStatusAsync(ct)));
+app.MapPost("/api/auth/google/disconnect", async (GoogleCredentialService credentials, CancellationToken ct) =>
+{
+    await credentials.DisconnectAsync(ct);
+    return Results.NoContent();
+});
 
 app.MapGet("/api/health", (
     ILogger<Program> logger) =>
@@ -129,6 +193,8 @@ app.MapPost(
         BulkEmailSender.Api.Contracts.SendRequest request,
         SendRequestValidator validator,
         SendOperationStore operationStore,
+        GoogleCredentialService credentials,
+        ICurrentUserService currentUser,
         ISendQueue queue,
         ILogger<Program> logger,
         CancellationToken cancellationToken) =>
@@ -139,10 +205,15 @@ app.MapPost(
         if (errors.Count > 0 || email is null)
             return Results.BadRequest(new { errors });
 
+        var gmailStatus = await credentials.GetStatusAsync(cancellationToken);
+        if (!gmailStatus.Connected)
+            return Results.Problem("Connect Gmail before sending email.", statusCode: StatusCodes.Status409Conflict, title: "Gmail not connected");
+
         var operation =
             await operationStore.CreateAsync(
                 recipients,
                 email,
+                currentUser.UserId,
                 cancellationToken);
 
         logger.LogInformation("Created send operation {OperationId} with {TotalRows} rows.", operation.Id, operation.TotalRows);
@@ -172,12 +243,20 @@ app.MapGet(
         Guid operationId,
         SendEventBroadcaster broadcaster,
         SendOperationStore operationStore,
+        ICurrentUserService currentUser,
         CancellationToken cancellationToken,
         HttpResponse response) =>
     {
         response.ContentType = "text/event-stream";
         response.Headers.CacheControl = "no-cache";
         response.Headers.Connection = "keep-alive";
+
+        var operation = await operationStore.GetAsync(operationId, cancellationToken);
+        if (operation is null || operation.UserId != currentUser.UserId)
+        {
+            response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
 
         // Subscribe before replaying saved events: live worker events can arrive
         // during the replay, and this ordering prevents a gap in the SSE stream.
@@ -202,12 +281,6 @@ app.MapGet(
                     cancellationToken);
             }
 
-            var operation = await operationStore.GetAsync(operationId, cancellationToken);
-            if (operation is null)
-            {
-                response.StatusCode = StatusCodes.Status404NotFound;
-                return;
-            }
             if (operation.Status == nameof(BulkEmailSender.Api.Domain.Sending.SendOperationStatus.Completed))
             {
                 // Finish reconnects for operations already complete; otherwise
@@ -253,6 +326,16 @@ app.MapGet(
 app.UseSwagger();
 app.UseSwaggerUI();
 app.Run();
+
+static string AddResult(string destination, string key, string value)
+{
+    var builder = new UriBuilder(destination);
+    var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(builder.Query)
+        .ToDictionary(pair => pair.Key, pair => pair.Value.ToString());
+    query[key] = value;
+    builder.Query = string.Join("&", query.Select(pair => Uri.EscapeDataString(pair.Key) + "=" + Uri.EscapeDataString(pair.Value)));
+    return builder.Uri.ToString();
+}
 
 
 static async Task WriteSseEventAsync(

@@ -1,0 +1,14 @@
+.app-header {
+  min-height: 58px; padding: 0 24px; display: flex; align-items: center;
+  justify-content: space-between; gap: 20px; background: #fff;
+  border-bottom: 1px solid #e5e7eb; font-family: Arial, sans-serif;
+}
+.app-brand { color: #182230; font-weight: 700; text-decoration: none; }
+.gmail-status { display: flex; align-items: center; gap: 9px; color: #344054; font-size: 13px; }
+.gmail-status small { display: block; margin-top: 2px; color: #667085; }
+.gmail-dot { width: 9px; height: 9px; flex: 0 0 9px; border-radius: 50%; background: #98a2b3; }
+.gmail-dot.connected { background: #12b76a; }
+.gmail-dot.loading { background: #f79009; }
+.gmail-button { border: 0; border-radius: 6px; padding: 8px 12px; background: #155eef; color: #fff; font: inherit; cursor: pointer; }
+.gmail-button.secondary { border: 1px solid #d0d5dd; background: #fff; color: #344054; }
+.auth-notice { padding: 9px 24px; background: #fffaeb; color: #93370d; font: 13px Arial, sans-serif; }

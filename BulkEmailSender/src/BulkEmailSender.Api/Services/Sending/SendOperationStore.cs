@@ -20,6 +20,7 @@ public sealed class SendOperationStore
     public async Task<SendOperation> CreateAsync(
         IReadOnlyList<Recipient> recipients,
         EmailDefinition email,
+        string userId,
         CancellationToken cancellationToken)
     {
         var now = DateTimeOffset.UtcNow;
@@ -28,6 +29,7 @@ public sealed class SendOperationStore
             new SendOperationEntity
             {
                 Id = Guid.NewGuid(),
+                UserId = userId,
                 CreatedAt = now,
                 Status = nameof(SendOperationStatus.Queued),
                 TotalRows = recipients.Count,
