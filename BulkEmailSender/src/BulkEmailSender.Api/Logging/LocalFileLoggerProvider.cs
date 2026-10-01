@@ -28,6 +28,7 @@ public sealed class LocalFileLoggerProvider : ILoggerProvider
     }
 
     public string LogFilePath { get; }
+    public string LogDirectory => Path.GetDirectoryName(LogFilePath)!;
 
     public ILogger CreateLogger(string categoryName) => new LocalFileLogger(this, categoryName);
 

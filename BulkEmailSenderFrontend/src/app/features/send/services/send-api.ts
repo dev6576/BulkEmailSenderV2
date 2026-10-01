@@ -10,6 +10,8 @@ import {
 import {
   Observable
 } from 'rxjs';
+import { tap } from 'rxjs';
+import { ClientLogger } from '../../../logging/client-logger';
 
 import {
   PreviewRequest,
@@ -27,6 +29,7 @@ export class SendApiService {
 
   private readonly http =
     inject(HttpClient);
+  private readonly logger = inject(ClientLogger);
 
 
   /* =========================================================
@@ -36,6 +39,8 @@ export class SendApiService {
   preview(
     request: PreviewRequest
   ): Observable<PreviewResponse> {
+
+    this.logger.write('info', 'EmailPreview', 'Email preview requested.');
 
     return this.http.post<PreviewResponse>(
       '/api/preview',
@@ -53,10 +58,13 @@ export class SendApiService {
     request: SendRequest
   ): Observable<SendResponse> {
 
+    this.logger.write('info', 'EmailSend', `Send operation requested for ${request.recipients.length} recipients.`);
+
     return this.http.post<SendResponse>(
       '/api/send',
       request
-    );
+    ).pipe(tap(response => this.logger.write('info', 'EmailSend',
+      `Send operation ${response.operationId} accepted with ${response.totalRows} recipients.`)));
 
   }
 
@@ -84,6 +92,7 @@ export class SendApiService {
         const eventSource =
           new EventSource(url);
         let operationCompleted = false;
+        this.logger.write('debug', 'EmailSendEvents', `Listening for operation ${operationId}.`);
 
 
         /*
@@ -177,6 +186,8 @@ export class SendApiService {
 
             if (sendEvent.status === 'Completed') {
               operationCompleted = true;
+              this.logger.write('info', 'EmailSendEvents',
+                `Operation ${operationId} completed: ${sendEvent.sentRows ?? 0} sent, ${sendEvent.failedRows ?? 0} failed, ${sendEvent.totalRows ?? 0} total.`);
             }
 
 

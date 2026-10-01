@@ -119,6 +119,16 @@ export class RecipientInput {
 
   gridRows: RecipientGridRow[] = [];
 
+  get gridViewportHeight(): number {
+    const compact = window.innerHeight <= 820;
+    const short = window.innerHeight <= 700;
+    const rowHeight = short ? 36 : compact ? 38 : 40;
+    const headerHeight = short ? 34 : compact ? 36 : 38;
+    const visibleRows = Math.min(this.gridRows.length, 10);
+
+    return headerHeight + visibleRows * rowHeight;
+  }
+
   columnDefs:
     ColDef<RecipientGridRow>[] = [];
 
@@ -688,7 +698,9 @@ export class RecipientInput {
 
       headerName: 'Actions',
 
-      width: 100,
+      width: 76,
+      minWidth: 76,
+      maxWidth: 76,
 
       editable: false,
 

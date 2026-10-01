@@ -2,7 +2,7 @@ import { ErrorHandler, Injectable } from '@angular/core';
 
 @Injectable({ providedIn: 'root' })
 export class ClientLogger {
-  write(level: 'warning' | 'error', category: string, message: string): void {
+  write(level: 'trace' | 'debug' | 'info' | 'warning' | 'error', category: string, message: string): void {
     // Keep the payload small and avoid logging request bodies, tokens, or email data.
     void fetch('/api/client-logs', {
       method: 'POST',

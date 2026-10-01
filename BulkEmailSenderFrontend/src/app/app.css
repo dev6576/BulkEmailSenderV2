@@ -12,3 +12,99 @@
 .gmail-button { border: 0; border-radius: 6px; padding: 8px 12px; background: #155eef; color: #fff; font: inherit; cursor: pointer; }
 .gmail-button.secondary { border: 1px solid #d0d5dd; background: #fff; color: #344054; }
 .auth-notice { padding: 9px 24px; background: #fffaeb; color: #93370d; font: 13px Arial, sans-serif; }
+
+.app-header {
+  min-height: 68px;
+  padding: 0 32px;
+  background: rgba(255, 255, 255, 0.96);
+  border-bottom-color: #e7ecf3;
+  box-shadow: 0 2px 10px rgba(24, 34, 48, 0.035);
+}
+
+.app-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #172b4d;
+  font-size: 16px;
+  letter-spacing: -0.025em;
+}
+
+.app-brand::before {
+  content: "";
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: linear-gradient(145deg, #155eef, #528bff);
+  box-shadow: 0 4px 10px rgba(21, 94, 239, 0.2);
+}
+
+.gmail-status { gap: 10px; font-size: 13px; }
+.gmail-dot { box-shadow: 0 0 0 4px #f2f4f7; }
+.gmail-dot.connected { box-shadow: 0 0 0 4px #ecfdf3; }
+.gmail-button { border-radius: 8px; padding: 9px 14px; background: #155eef; font-weight: 600; transition: background .15s ease, transform .15s ease; }
+.gmail-button:hover { background: #004eeb; }
+.gmail-button:active { transform: translateY(1px); }
+.gmail-button.secondary { border-color: #d0d5dd; }
+.auth-notice { padding: 10px 32px; border-bottom: 1px solid #fedf89; }
+
+@media (max-width: 600px) {
+  .app-header { min-height: 62px; padding: 0 16px; gap: 12px; }
+  .gmail-status { gap: 7px; font-size: 12px; }
+  .gmail-status small { max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
+  .gmail-button { padding: 8px 10px; }
+}
+
+/* A warmer, editorial identity for the mail workshop. */
+.app-header {
+  min-height: 72px;
+  padding: 0 36px;
+  background: #fbf8f2;
+  border-bottom: 1px solid #e7dfd3;
+  box-shadow: 0 3px 12px rgba(60, 44, 31, .04);
+}
+.app-brand {
+  gap: 12px;
+  color: #302b27;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -.035em;
+}
+.app-brand::before {
+  content: '✉';
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #dec6b4;
+  border-radius: 10px 10px 10px 3px;
+  background: #f1e5d9;
+  color: #a65037;
+  font-family: Georgia, serif;
+  font-size: 17px;
+  box-shadow: none;
+}
+.gmail-status { color: #625a52; }
+.gmail-dot { background: #c8bcae; box-shadow: 0 0 0 4px #f3ede5; }
+.gmail-dot.connected { background: #63826a; box-shadow: 0 0 0 4px #e9f0e8; }
+.gmail-dot.loading { background: #bf7742; }
+.gmail-button { border-color: #a65037; background: #a65037; box-shadow: 0 2px 5px rgba(102, 52, 37, .13); }
+.gmail-button:hover { background: #8f422d; }
+.gmail-button.secondary { border-color: #d8cec2; background: #fbf8f2; color: #625a52; }
+.gmail-button.secondary:hover { background: #f2ece3; }
+.auth-notice { border-color: #ead4b1; background: #fbf2df; color: #805325; }
+
+@media (max-width: 600px) {
+  .app-header { padding: 0 16px; }
+  .app-brand { font-size: 17px; }
+}
+
+/* Pastel orange theme */
+.app-header { background: #fffaf5; border-bottom-color: #f1dfcf; }
+.app-brand::before { border-color: #f0c9a8; background: #ffead8; color: #b85c25; }
+.gmail-button { border-color: #bf642d; background: #bf642d; }
+.gmail-button:hover { background: #a95020; }
+.gmail-button.secondary { border-color: #ead8c8; background: #fffaf5; }
+.gmail-button.secondary:hover { background: #fff0e2; }
+.auth-notice { border-color: #f4d3ad; background: #fff2df; color: #8e531f; }

@@ -122,7 +122,16 @@ export class Send {
     signal<SendTab>('data');
 
   isPreviewDockOpen =
-    signal(true);
+    signal(false);
+
+  previewDockHeight =
+    signal<number | null>(null);
+
+  private previewResizeStart: {
+    pointerId: number;
+    startY: number;
+    startHeight: number;
+  } | null = null;
 
 
   /* =========================================================
@@ -642,6 +651,63 @@ export class Send {
       isOpen => !isOpen
     );
 
+  }
+
+
+  startPreviewResize(event: PointerEvent): void {
+    if (event.button !== 0) {
+      return;
+    }
+
+    const handle = event.currentTarget as HTMLElement;
+    const dock = handle.closest('.preview-dock');
+    if (!dock) {
+      return;
+    }
+
+    event.preventDefault();
+    handle.setPointerCapture(event.pointerId);
+    this.previewResizeStart = {
+      pointerId: event.pointerId,
+      startY: event.clientY,
+      startHeight: dock.getBoundingClientRect().height
+    };
+  }
+
+
+  movePreviewResize(event: PointerEvent): void {
+    const start = this.previewResizeStart;
+    if (!start || start.pointerId !== event.pointerId) {
+      return;
+    }
+
+    const height = start.startHeight + start.startY - event.clientY;
+    this.setPreviewDockHeight(height);
+  }
+
+
+  stopPreviewResize(event: PointerEvent): void {
+    if (this.previewResizeStart?.pointerId === event.pointerId) {
+      this.previewResizeStart = null;
+    }
+  }
+
+
+  resizePreviewWithKeyboard(event: KeyboardEvent): void {
+    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') {
+      return;
+    }
+
+    event.preventDefault();
+    const dock = (event.currentTarget as HTMLElement).closest('.preview-dock');
+    const currentHeight = dock?.getBoundingClientRect().height ?? this.previewDockHeight() ?? 240;
+    this.setPreviewDockHeight(currentHeight + (event.key === 'ArrowUp' ? 20 : -20));
+  }
+
+
+  private setPreviewDockHeight(height: number): void {
+    const maxHeight = Math.max(180, Math.min(700, window.innerHeight * 0.75));
+    this.previewDockHeight.set(Math.round(Math.max(120, Math.min(maxHeight, height))));
   }
 
 

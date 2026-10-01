@@ -24,6 +24,7 @@ var databaseConnectionString = builder.Configuration.GetConnectionString("Defaul
     ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is not configured.");
 var fileLoggerProvider = new LocalFileLoggerProvider(databaseConnectionString);
 builder.Logging.AddProvider(fileLoggerProvider);
+builder.Services.AddSingleton(new FrontendFileLogStore(fileLoggerProvider.LogDirectory));
 
 builder.Services.AddSingleton<TemplateRenderer>();
 builder.Services.AddSingleton<RecipientValidator>();
@@ -174,25 +175,24 @@ app.MapGet("/api/health", (
     });
 });
 
-app.MapPost("/api/client-logs", (ClientLogRequest request, ILoggerFactory loggerFactory) =>
+app.MapPost("/api/client-logs", (ClientLogRequest request, FrontendFileLogStore frontendLogs) =>
 {
     if (string.IsNullOrWhiteSpace(request.Message) || request.Message.Length > 4000 ||
         string.IsNullOrWhiteSpace(request.Level) || request.Level.Length > 16 ||
         (request.Category?.Length ?? 0) > 128)
         return Results.BadRequest();
 
-    var category = "Frontend." + (string.IsNullOrWhiteSpace(request.Category) ? "Application" : request.Category);
-    var logger = loggerFactory.CreateLogger(category);
-    var message = request.Message;
-    switch (request.Level.Trim().ToLowerInvariant())
+    var level = request.Level.Trim().ToUpperInvariant() switch
     {
-        case "trace": logger.LogTrace("{ClientMessage}", message); break;
-        case "debug": logger.LogDebug("{ClientMessage}", message); break;
-        case "warning":
-        case "warn": logger.LogWarning("{ClientMessage}", message); break;
-        case "error": logger.LogError("{ClientMessage}", message); break;
-        default: logger.LogInformation("{ClientMessage}", message); break;
-    }
+        "WARN" => "WARNING",
+        "TRACE" => "TRACE",
+        "DEBUG" => "DEBUG",
+        "WARNING" => "WARNING",
+        "ERROR" => "ERROR",
+        _ => "INFORMATION"
+    };
+    var category = string.IsNullOrWhiteSpace(request.Category) ? "Application" : request.Category.Trim();
+    frontendLogs.Write(level, category, request.Message);
     return Results.Accepted();
 }).WithMetadata(new Microsoft.AspNetCore.Mvc.RequestSizeLimitAttribute(8192));
 

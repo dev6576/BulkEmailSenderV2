@@ -1,4 +1,6 @@
-<section class="send-page">
+<section
+  class="send-page"
+  [style.padding-bottom.px]="isPreviewDockOpen() ? (previewDockHeight() ?? 240) : 44">
 
   <header class="send-header">
     <h1>Send Emails</h1>
@@ -245,7 +247,25 @@
 
   <section
     class="preview-dock"
-    [class.collapsed]="!isPreviewDockOpen()">
+    [class.collapsed]="!isPreviewDockOpen()"
+    [style.height.px]="isPreviewDockOpen() ? previewDockHeight() : null">
+
+    <div
+      class="preview-resize-handle"
+      role="separator"
+      aria-orientation="horizontal"
+      aria-label="Resize preview panel"
+      title="Drag to resize; use the arrow keys when focused"
+      aria-valuemin="120"
+      aria-valuemax="700"
+      [attr.aria-valuenow]="previewDockHeight() ?? 240"
+      tabindex="0"
+      (pointerdown)="startPreviewResize($event)"
+      (pointermove)="movePreviewResize($event)"
+      (pointerup)="stopPreviewResize($event)"
+      (pointercancel)="stopPreviewResize($event)"
+      (keydown)="resizePreviewWithKeyboard($event)">
+    </div>
 
     <div class="preview-dock-header">
 

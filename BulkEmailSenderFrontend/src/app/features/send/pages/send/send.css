@@ -848,3 +848,272 @@ code {
   color: #667085;
   font-size: 13px;
 }
+
+/* Visual polish: keep the existing composer structure and behavior intact. */
+.send-page { color: #182230; background: #f4f7fb; }
+.send-header { padding: 26px 32px 16px; }
+.send-header h1 { color: #172b4d; font-size: 26px; letter-spacing: -0.035em; }
+.send-tabs { gap: 8px; padding: 0 32px; border-color: #e2e8f0; }
+.send-tab { padding: 11px 16px 12px; border-radius: 8px 8px 0 0; color: #667085; font-weight: 600; transition: color .15s ease, background .15s ease; }
+.send-tab:hover { color: #155eef; background: #edf4ff; }
+.send-tab.active { color: #155eef; border-bottom-color: #155eef; }
+.send-workspace { padding: 20px 32px; }
+.send-action-bar { margin-bottom: 12px; padding: 12px 16px; border-color: #e2e8f0; border-radius: 10px; background: #fff; box-shadow: 0 2px 8px rgba(24, 34, 48, .035); }
+.send-action-info { color: #667085; }
+.send-action-info strong { color: #155eef; font-size: 17px; }
+.send-button { border-color: #155eef; border-radius: 8px; background: #155eef; box-shadow: 0 3px 8px rgba(21, 94, 239, .18); transition: background .15s ease, transform .15s ease, box-shadow .15s ease; }
+.send-button:hover:not(:disabled) { background: #004eeb; box-shadow: 0 5px 12px rgba(21, 94, 239, .24); }
+.send-button:active:not(:disabled) { transform: translateY(1px); }
+.send-button:disabled { border-color: #d0d5dd; background: #eaecf0; color: #98a2b3; box-shadow: none; }
+.send-progress-panel, .send-error { border-radius: 9px; }
+.send-progress-panel { border-color: #dbe7ff; background: #f8faff; }
+.send-progress-bar { background: #155eef; }
+.send-readiness { margin: -3px 0 12px; padding-left: 2px; line-height: 1.5; }
+.email-editor { max-width: 1040px; padding: 24px; border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; box-shadow: 0 4px 16px rgba(24, 34, 48, .045); }
+.section-heading { margin-bottom: 22px; }
+.section-heading h2 { margin-bottom: 7px; color: #172b4d; font-size: 20px; letter-spacing: -.025em; }
+.section-heading p { color: #667085; line-height: 1.55; }
+.email-editor form { gap: 12px; }
+.subject-field, .email-body-label { color: #344054; }
+.subject-field { margin-top: 0; }
+.email-editor input { border-color: #d0d5dd; border-radius: 8px; background: #fff; transition: border-color .15s ease, box-shadow .15s ease; }
+.email-editor input:focus { border-color: #84adff; box-shadow: 0 0 0 4px #eff4ff; }
+.editor-mode { border-color: #e2e8f0; border-radius: 7px; background: #f2f4f7; }
+.editor-mode button { border-radius: 5px; color: #667085; }
+.editor-mode button.active { color: #155eef; box-shadow: 0 1px 4px rgba(16, 24, 40, .12); }
+:host ::ng-deep .email-body-label .ql-toolbar { border-color: #d0d5dd; border-radius: 8px 8px 0 0; background: #f8fafc; }
+:host ::ng-deep .email-body-label .ql-container { border-color: #d0d5dd; border-radius: 0 0 8px 8px; }
+:host ::ng-deep .email-body-label .ql-editor.ql-blank::before { color: #98a2b3; }
+.attachments-section { margin-top: 8px; padding: 14px 0 0; border-top-color: #eaecf0; }
+.attachments-heading h3 { color: #344054; font-size: 14px; }
+.attach-button, .remove-attachment { border-color: #d0d5dd; border-radius: 7px; color: #344054; transition: background .15s ease, border-color .15s ease; }
+.attach-button:hover, .remove-attachment:hover { border-color: #b2ccff; background: #f5f8ff; }
+.attachment-list { border-color: #eaecf0; }
+.attachment-list li { border-color: #eaecf0; }
+.template-help { padding: 16px; border-color: #dbe7ff; border-radius: 10px; background: #f8faff; color: #667085; }
+.template-help strong { color: #172b4d; }
+.template-field { border-color: #d0d5dd; border-radius: 7px; color: #344054; transition: border-color .15s ease, background .15s ease; }
+.template-field:hover { border-color: #84adff; background: #eff4ff; }
+.template-help-note { border-top-color: #e2e8f0; }
+.preview-dock { border-top-color: #dbe3ef; background: #f7f9fc; box-shadow: 0 -4px 16px rgba(24, 34, 48, .06); backdrop-filter: none; }
+.preview-dock-header { border-bottom-color: #e2e8f0; background: #fff; }
+.preview-dock-header h2 { color: #172b4d; font-size: 15px; }
+.preview-recipient { color: #667085; }
+.preview-toggle-button { border-color: #d0d5dd; border-radius: 7px; color: #475467; }
+.preview-toggle-button:hover { border-color: #b2ccff; background: #f5f8ff; }
+.preview-dock-content { padding-top: 14px; }
+.preview-email { border-color: #e2e8f0; border-radius: 10px; box-shadow: 0 2px 8px rgba(24, 34, 48, .035); }
+.preview-email-meta, .preview-attachments { border-color: #eaecf0; color: #475467; }
+.dialog-backdrop { background: rgba(16, 24, 40, .46); backdrop-filter: blur(3px); }
+.send-confirmation { border-color: #e2e8f0; border-radius: 14px; box-shadow: 0 20px 50px rgba(16, 24, 40, .2); }
+.send-confirmation h2 { color: #172b4d; letter-spacing: -.025em; }
+.send-confirmation dl > div { border-color: #eaecf0; }
+.send-confirmation dt { color: #667085; }
+.confirmation-actions .send-button { width: auto; }
+.send-page button:focus-visible { outline-color: rgba(21, 94, 239, .35); }
+
+@media (max-width: 700px) {
+  .send-header, .send-workspace, .send-tabs, .preview-dock-header, .preview-dock-content { padding-left: 16px; padding-right: 16px; }
+  .send-header { padding-top: 20px; }
+  .email-editor { padding: 18px; }
+}
+
+/* Pastel orange theme */
+.send-page { background: #fff7ef; }
+.send-tabs { border-color: #f0dfd0; }
+.send-tab:hover { color: #a95020; background: #fff0e2; }
+.send-tab.active { color: #a95020; border-bottom-color: #d8783d; }
+.send-action-bar { border-color: #f0dfd0; background: #fffaf5; }
+.send-action-info strong { color: #bc682f; }
+.send-button { border-color: #bf642d; background: #bf642d; box-shadow: 0 3px 8px rgba(177, 91, 39, .16); }
+.send-button:hover:not(:disabled) { background: #a95020; box-shadow: 0 4px 10px rgba(177, 91, 39, .2); }
+.send-button:disabled { border-color: #ebdfd3; background: #f2ebe3; }
+.send-progress-panel { border-color: #f3d9c1; background: #fff8ef; }
+.send-progress-bar { background: #d8783d; }
+.email-editor { border-color: #f0dfd0; background: #fffaf5; }
+.email-editor input { border-color: #e7d4c3; background: #fffdfb; }
+.email-editor input:focus { border-color: #e6a36e; box-shadow: 0 0 0 3px #fff0e2; }
+.editor-mode { border-color: #f0dfd0; background: #fff0e2; }
+.editor-mode button.active { color: #a95020; }
+:host ::ng-deep .email-body-label .ql-toolbar { border-color: #e7d4c3; background: #fff3e8; }
+:host ::ng-deep .email-body-label .ql-container { border-color: #e7d4c3; background: #fffdfb; }
+.attachments-section { border-top-color: #f0dfd0; }
+.attach-button, .remove-attachment { border-color: #e7d4c3; background: #fffdfb; }
+.attach-button:hover, .remove-attachment:hover { border-color: #e6a36e; background: #fff0e2; }
+.attachment-list, .attachment-list li { border-color: #f1e5da; }
+.template-help { border-color: #f0d8c1; background: #fff2e5; }
+.template-field { border-color: #e8cbb2; background: #fffaf5; color: #88491f; }
+.template-field:hover { border-color: #e6a36e; background: #ffead8; }
+.template-help-note { border-top-color: #f0dfd0; }
+.preview-dock { border-top-color: #efd9c6; background: #fff0e2; }
+.preview-dock-header { border-bottom-color: #f0dfd0; background: #fffaf5; }
+.preview-toggle-button { border-color: #e7d4c3; background: #fffdfb; }
+.preview-toggle-button:hover { border-color: #e6a36e; background: #fff0e2; }
+.preview-email { border-color: #f0dfd0; background: #fffdfb; }
+.preview-email-meta, .preview-attachments { border-color: #f1e5da; }
+.send-confirmation { border-color: #f0dfd0; background: #fffaf5; }
+.send-confirmation dl > div { border-color: #f1e5da; }
+.confirmation-warning { color: #a95a27; }
+.send-page button:focus-visible { outline-color: rgba(216, 120, 61, .32); }
+
+/* Reserve more vertical space for the recipient table. */
+.send-header { padding-top: 16px; padding-bottom: 9px; }
+.send-header h1 { font-size: 25px; }
+.send-tabs { min-height: 38px; }
+.send-tab { padding-top: 8px; padding-bottom: 8px; }
+.send-workspace { padding-top: 12px; padding-bottom: 12px; }
+.send-action-bar { margin-bottom: 8px; padding-top: 8px; padding-bottom: 8px; }
+.preview-dock { flex-basis: 190px; }
+.preview-dock.collapsed { flex-basis: 42px; }
+.preview-dock-header { flex-basis: 38px; padding-top: 5px; padding-bottom: 5px; }
+.preview-dock-content { padding-top: 8px; padding-bottom: 8px; }
+
+@media (max-height: 820px) {
+  .send-header { padding-top: 12px; padding-bottom: 6px; }
+  .send-header h1 { font-size: 23px; }
+  .send-workspace { padding-top: 8px; padding-bottom: 8px; }
+  .preview-dock { flex-basis: 170px; }
+  .preview-dock.collapsed { flex-basis: 40px; }
+}
+
+@media (max-height: 700px) {
+  .preview-dock { flex-basis: 148px; }
+  .preview-dock.collapsed { flex-basis: 38px; }
+  .preview-dock-content { padding-top: 5px; padding-bottom: 5px; }
+}
+
+/* Keep the grid and preview at their comfortable sizes; scroll the composer page. */
+:host {
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+.send-page { height: auto; min-height: 100%; overflow: visible; }
+.send-header { padding: 27px 36px 16px; }
+.send-header h1 { font-size: 29px; }
+.send-tab { padding: 11px 16px 12px; }
+.send-workspace { flex: 0 0 auto; min-height: 0; padding: 20px 36px; overflow: visible; }
+.tab-panel { flex: 0 0 auto; height: auto; min-height: 0; }
+.data-panel { overflow: visible; }
+.data-panel app-recipient-input { height: auto; }
+.template-panel { overflow: visible; }
+.preview-dock { flex: 0 0 240px; margin-top: 0; }
+.preview-dock.collapsed { flex-basis: 44px; }
+.preview-dock-header { flex-basis: 44px; }
+
+@media (max-width: 700px) {
+  .send-header, .send-workspace, .send-tabs { padding-left: 16px; padding-right: 16px; }
+  .send-header { padding-top: 21px; }
+}
+
+/* Keep the preview docked to the viewport while the composer scrolls. */
+:host { padding-bottom: 0; }
+.send-page { padding-bottom: 44px; }
+.preview-dock {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 20;
+  width: 100%;
+  height: 240px;
+  flex: none;
+}
+.preview-dock.collapsed { height: 44px; flex: none; }
+.preview-resize-handle {
+  z-index: 1;
+  display: grid;
+  flex: 0 0 12px;
+  place-items: center;
+  width: 100%;
+  cursor: row-resize;
+  touch-action: none;
+}
+.preview-resize-handle::before {
+  width: 38px;
+  height: 4px;
+  border-radius: 999px;
+  background: #e6a36e;
+  content: '';
+  transition: width .15s ease, background .15s ease;
+}
+.preview-resize-handle:hover::before,
+.preview-resize-handle:focus-visible::before { width: 54px; background: #bf642d; }
+.preview-resize-handle:focus-visible { outline: 0; }
+.preview-dock.collapsed .preview-resize-handle { display: none; }
+
+@media (max-width: 700px) {
+  :host { padding-bottom: 0; }
+  .preview-dock { height: 200px; }
+  .preview-dock.collapsed { height: 44px; }
+}
+
+/* Warm editorial palette: paper, ink, terracotta, and sage. */
+.send-page { color: #302b27; background: #f4f0e9; }
+.send-header { padding: 27px 36px 16px; }
+.send-header h1,
+.section-heading h2,
+.preview-dock-header h2,
+.send-confirmation h2 {
+  color: #302b27;
+  font-family: Georgia, 'Times New Roman', serif;
+  letter-spacing: -.035em;
+}
+.send-header h1 { font-size: 29px; font-weight: 600; }
+.send-tabs { gap: 4px; padding: 0 36px; border-color: #dfd6ca; }
+.send-tab { color: #776d63; }
+.send-tab:hover { color: #8f422d; background: #eee6dc; }
+.send-tab.active { color: #8f422d; border-bottom-color: #a65037; }
+.send-workspace { padding: 20px 36px; }
+.send-action-bar { border-color: #e3dacf; background: #fbf8f2; box-shadow: 0 3px 12px rgba(60, 44, 31, .045); }
+.send-action-info { color: #776d63; }
+.send-action-info strong { color: #63826a; }
+.send-button { border-color: #a65037; background: #a65037; box-shadow: 0 3px 8px rgba(102, 52, 37, .14); }
+.send-button:hover:not(:disabled) { background: #8f422d; box-shadow: 0 4px 10px rgba(102, 52, 37, .2); }
+.send-button:disabled { border-color: #ddd4ca; background: #e9e3db; color: #9a9188; }
+.send-progress-panel { border-color: #d8e0d4; background: #f5f7f1; }
+.send-progress-bar { background: #71866d; }
+.send-readiness, .section-heading p { color: #776d63; }
+.email-editor { max-width: 1060px; padding: 26px 28px; border-color: #e3dacf; border-radius: 12px 12px 12px 4px; background: #fbf8f2; box-shadow: 0 7px 24px rgba(60, 44, 31, .055); }
+.section-heading h2 { font-weight: 600; }
+.subject-field, .email-body-label { color: #514940; }
+.email-editor input { border-color: #d8cec2; border-radius: 7px; background: #fffdfa; }
+.email-editor input:focus { border-color: #bb8a70; box-shadow: 0 0 0 3px #f4e9e1; }
+.editor-mode { border-color: #e3dacf; background: #f1ece4; }
+.editor-mode button { color: #776d63; }
+.editor-mode button.active { color: #8f422d; }
+:host ::ng-deep .email-body-label .ql-toolbar { border-color: #d8cec2; background: #f4efe8; }
+:host ::ng-deep .email-body-label .ql-container { border-color: #d8cec2; background: #fffdfa; }
+:host ::ng-deep .email-body-label .ql-editor.ql-blank::before { color: #a69b8e; }
+.attachments-section { border-top-color: #e5ddd2; }
+.attachments-heading h3, .template-help strong { color: #514940; }
+.attach-button, .remove-attachment { border-color: #d8cec2; background: #fffdfa; color: #514940; }
+.attach-button:hover, .remove-attachment:hover { border-color: #d2aa97; background: #f8eee8; }
+.attachment-list, .attachment-list li { border-color: #e9e1d7; }
+.template-help { border-color: #e3dacf; border-radius: 9px 9px 9px 3px; background: #f3eee6; color: #776d63; }
+.template-help strong { font-family: Georgia, 'Times New Roman', serif; font-size: 16px; }
+.template-field { border-color: #d8cec2; border-radius: 6px 6px 6px 2px; background: #fffdfa; color: #6b493c; }
+.template-field:hover { border-color: #c58b71; background: #f8eee8; }
+.template-help-note { border-top-color: #e2d8cc; }
+.preview-dock { border-top-color: #ded4c8; background: #eee8df; box-shadow: 0 -4px 16px rgba(60, 44, 31, .06); }
+.preview-dock-header { border-bottom-color: #e3dacf; background: #f8f4ed; }
+.preview-dock-header h2 { font-weight: 600; }
+.preview-recipient { color: #776d63; }
+.preview-toggle-button { border-color: #d8cec2; background: #fffdfa; color: #625a52; }
+.preview-toggle-button:hover { border-color: #d2aa97; background: #f8eee8; }
+.preview-email { border-color: #e3dacf; background: #fffdfa; box-shadow: 0 2px 8px rgba(60, 44, 31, .045); }
+.preview-email-meta, .preview-attachments { border-color: #eee6dc; color: #625a52; }
+.dialog-backdrop { background: rgba(48, 43, 39, .48); }
+.send-confirmation { border-color: #e3dacf; border-radius: 12px 12px 12px 4px; background: #fbf8f2; }
+.send-confirmation h2 { font-weight: 600; }
+.send-confirmation dl > div { border-color: #e9e1d7; }
+.send-confirmation dt { color: #776d63; }
+.confirmation-warning { color: #93612d; }
+.send-page button:focus-visible { outline-color: rgba(166, 80, 55, .3); }
+
+@media (max-width: 700px) {
+  .send-header, .send-workspace, .send-tabs, .preview-dock-header, .preview-dock-content { padding-left: 16px; padding-right: 16px; }
+  .send-header { padding-top: 21px; }
+  .email-editor { padding: 18px; }
+}

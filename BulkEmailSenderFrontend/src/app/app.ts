@@ -1,6 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { RouterLink, RouterOutlet } from '@angular/router';
 import { AuthService } from './features/auth/auth.service';
+import { ClientLogger } from './logging/client-logger';
 
 @Component({
   selector: 'app-root',
@@ -10,8 +11,10 @@ import { AuthService } from './features/auth/auth.service';
 })
 export class App implements OnInit {
   readonly auth = inject(AuthService);
+  private readonly logger = inject(ClientLogger);
 
   ngOnInit(): void {
+    this.logger.write('info', 'Application', 'Frontend application initialized.');
     const params = new URLSearchParams(window.location.search);
     const result = params.get('gmail') ?? params.get('error');
     if (result) {
