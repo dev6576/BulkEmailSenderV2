@@ -7,6 +7,7 @@ using BulkEmailSender.Api.Contracts;
 using BulkEmailSender.Api.Domain.Email;
 using BulkEmailSender.Api.Services.Providers;
 using BulkEmailSender.Api.Services.Sending;
+using BulkEmailSender.Api.Logging;
 
 using System.Text.Json;
 using Microsoft.AspNetCore.Http.Features;
@@ -19,6 +20,10 @@ var builder = WebApplication.CreateBuilder(args);
 // API process cannot write to the machine-wide event source.
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
+var databaseConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is not configured.");
+var fileLoggerProvider = new LocalFileLoggerProvider(databaseConnectionString);
+builder.Logging.AddProvider(fileLoggerProvider);
 
 builder.Services.AddSingleton<TemplateRenderer>();
 builder.Services.AddSingleton<RecipientValidator>();
@@ -50,10 +55,31 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(
-        builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlite(databaseConnectionString));
 
 var app = builder.Build();
+var startupLogger = app.Services.GetRequiredService<ILogger<Program>>();
+startupLogger.LogInformation("Application started. Local log file: {LogFilePath}", fileLoggerProvider.LogFilePath);
+
+app.Use(async (context, next) =>
+{
+    var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+    var started = System.Diagnostics.Stopwatch.GetTimestamp();
+    try
+    {
+        await next();
+        logger.LogInformation("HTTP {Method} {Path} responded {StatusCode} in {ElapsedMs} ms.",
+            context.Request.Method, context.Request.Path, context.Response.StatusCode,
+            System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+    }
+    catch (Exception exception)
+    {
+        logger.LogError(exception, "HTTP {Method} {Path} failed after {ElapsedMs} ms.",
+            context.Request.Method, context.Request.Path,
+            System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+        throw;
+    }
+});
 
 var sessionProtector = app.Services.GetRequiredService<IDataProtectionProvider>().CreateProtector("BulkEmailSender.BrowserSession.v1");
 app.Use(async (context, next) =>
@@ -95,21 +121,39 @@ app.MapGet("/api/auth/google", async (GoogleOAuthService oauth, IOptions<GoogleO
     return Results.Redirect(await oauth.CreateAuthorizationUrlAsync(ct));
 });
 
-app.MapGet("/api/auth/google/callback", async (HttpRequest request, GoogleOAuthService oauth, IOptions<GoogleOAuthOptions> options, CancellationToken ct) =>
+app.MapGet("/api/auth/google/callback", async (HttpRequest request, GoogleOAuthService oauth, IOptions<GoogleOAuthOptions> options, ILogger<Program> logger, CancellationToken ct) =>
 {
     var destination = options.Value.AngularReturnUri;
     var error = request.Query["error"].ToString();
-    if (!string.IsNullOrEmpty(error)) return Results.Redirect(AddResult(destination, "error", "authorization_denied"));
+    if (!string.IsNullOrEmpty(error))
+    {
+        logger.LogWarning("Google OAuth authorization was denied with error {OAuthError}.", error);
+        return Results.Redirect(AddResult(destination, "error", "authorization_denied"));
+    }
     var code = request.Query["code"].ToString();
     var state = request.Query["state"].ToString();
-    if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(state)) return Results.Redirect(AddResult(destination, "error", "invalid_callback"));
+    if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(state))
+    {
+        logger.LogWarning("Google OAuth callback did not include the required code and state values.");
+        return Results.Redirect(AddResult(destination, "error", "invalid_callback"));
+    }
     try
     {
         var success = await oauth.CompleteAsync(code, state, ct);
+        if (success) logger.LogInformation("Google OAuth connection completed successfully.");
+        else logger.LogWarning("Google OAuth callback was rejected because its state was invalid or expired.");
         return Results.Redirect(AddResult(destination, "gmail", success ? "connected" : "invalid_state"));
     }
-    catch (HttpRequestException) { return Results.Redirect(AddResult(destination, "error", "token_exchange_failed")); }
-    catch (InvalidOperationException) { return Results.Redirect(AddResult(destination, "error", "token_exchange_failed")); }
+    catch (HttpRequestException exception)
+    {
+        logger.LogError(exception, "Google OAuth token exchange or profile lookup failed.");
+        return Results.Redirect(AddResult(destination, "error", "token_exchange_failed"));
+    }
+    catch (InvalidOperationException exception)
+    {
+        logger.LogError(exception, "Google OAuth callback could not be completed.");
+        return Results.Redirect(AddResult(destination, "error", "token_exchange_failed"));
+    }
 });
 
 app.MapGet("/api/auth/status", async (GoogleCredentialService credentials, CancellationToken ct) => Results.Ok(await credentials.GetStatusAsync(ct)));
@@ -129,6 +173,28 @@ app.MapGet("/api/health", (
         status = "healthy"
     });
 });
+
+app.MapPost("/api/client-logs", (ClientLogRequest request, ILoggerFactory loggerFactory) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Message) || request.Message.Length > 4000 ||
+        string.IsNullOrWhiteSpace(request.Level) || request.Level.Length > 16 ||
+        (request.Category?.Length ?? 0) > 128)
+        return Results.BadRequest();
+
+    var category = "Frontend." + (string.IsNullOrWhiteSpace(request.Category) ? "Application" : request.Category);
+    var logger = loggerFactory.CreateLogger(category);
+    var message = request.Message;
+    switch (request.Level.Trim().ToLowerInvariant())
+    {
+        case "trace": logger.LogTrace("{ClientMessage}", message); break;
+        case "debug": logger.LogDebug("{ClientMessage}", message); break;
+        case "warning":
+        case "warn": logger.LogWarning("{ClientMessage}", message); break;
+        case "error": logger.LogError("{ClientMessage}", message); break;
+        default: logger.LogInformation("{ClientMessage}", message); break;
+    }
+    return Results.Accepted();
+}).WithMetadata(new Microsoft.AspNetCore.Mvc.RequestSizeLimitAttribute(8192));
 
 app.MapPost(
     "/api/preview",
@@ -350,4 +416,6 @@ static async Task WriteSseEventAsync(
         $"data: {json}\n\n",
         cancellationToken);
 }
+
+public sealed record ClientLogRequest(string Level, string? Category, string Message);
 public partial class Program;
