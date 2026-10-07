@@ -18,14 +18,27 @@ export class AuthService {
 
   checkSession(): void {
     this.http.get<{ authenticated: boolean }>('/api/auth/session').subscribe({
-      next: () => { this.authenticated.set(true); this.refresh(); },
-      error: () => { this.authenticated.set(false); this.loading.set(false); }
+      next: ({ authenticated }) => {
+        this.authenticated.set(authenticated);
+        if (authenticated) {
+          this.refresh();
+        } else {
+          this.loading.set(false);
+        }
+      },
+      error: () => {
+        this.authenticated.set(false);
+        this.loading.set(false);
+      }
     });
   }
-  login(password: string): Observable<void> {
-    return this.http.post<void>('/api/auth/login', { password });
+  login(password: string): Observable<{ authenticated: boolean }> {
+    return this.http.post<{ authenticated: boolean }>('/api/auth/login', { password });
   }
-  logout(): Observable<void> { return this.http.post<void>('/api/auth/logout', {}); }
+
+  logout(): Observable<void> {
+    return this.http.post<void>('/api/auth/logout', {});
+  }
 
   refresh(): void {
     this.loading.set(true);
@@ -35,7 +48,11 @@ export class AuthService {
     });
   }
 
-  connect(): void { window.location.assign('/api/auth/google'); }
+  connect(): void {
+    window.location.assign('/api/auth/google');
+  }
 
-  disconnect(): Observable<void> { return this.http.post<void>('/api/auth/google/disconnect', {}); }
+  disconnect(): Observable<void> {
+    return this.http.post<void>('/api/auth/google/disconnect', {});
+  }
 }
