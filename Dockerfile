@@ -25,5 +25,5 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf 
 COPY --from=backend-build --chown=app:app /publish/ ./
 COPY --from=frontend-build --chown=app:app /src/BulkEmailSenderFrontend/dist/BulkEmailSender.Web/browser/ ./wwwroot/
 USER app
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD-SHELL curl --fail --silent "http://127.0.0.1:${PORT:-10000}/health" || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD ["sh", "-c", "curl --fail --silent \"http://127.0.0.1:${PORT:-10000}/health\" || exit 1"]
 ENTRYPOINT ["sh", "-c", "export ASPNETCORE_URLS=\"http://0.0.0.0:${PORT:-10000}\"; exec dotnet BulkEmailSender.Api.dll"]
