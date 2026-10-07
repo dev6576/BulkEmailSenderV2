@@ -11,6 +11,7 @@ using BulkEmailSender.Api.Logging;
 
 using System.Text.Json;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.HttpOverrides;
 using BulkEmailSender.Api.Services.Auth;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Options;
@@ -37,6 +38,12 @@ builder.Services.AddSingleton<EmailAttachmentRequestValidator>();
 builder.Services.AddSingleton<SendRequestValidator>();
 builder.Services.AddSingleton<EmailRenderer>();
 builder.Services.AddDataProtection();
+var dataProtectionKeysPath = builder.Configuration["DataProtection:KeysPath"];
+if (!string.IsNullOrWhiteSpace(dataProtectionKeysPath))
+{
+    Directory.CreateDirectory(dataProtectionKeysPath);
+    builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath));
+}
 builder.Services.Configure<GoogleOAuthOptions>(builder.Configuration.GetSection("GoogleOAuth"));
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient("google-oauth");
@@ -59,6 +66,44 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(databaseConnectionString));
 
 var app = builder.Build();
+if (app.Environment.IsProduction() && string.IsNullOrWhiteSpace(app.Configuration["AppAuth:PasswordHash"]))
+    throw new InvalidOperationException("AppAuth:PasswordHash must be configured in Production.");
+if (app.Environment.IsProduction())
+{
+    var requiredGoogleSettings = new[]
+    {
+        "GoogleOAuth:ClientId", "GoogleOAuth:ClientSecret",
+        "GoogleOAuth:RedirectUri", "GoogleOAuth:AngularReturnUri"
+    };
+    var missingGoogleSettings = requiredGoogleSettings.Where(key => string.IsNullOrWhiteSpace(app.Configuration[key])).ToArray();
+    if (missingGoogleSettings.Length > 0)
+        throw new InvalidOperationException($"Required Production settings are missing: {string.Join(", ", missingGoogleSettings)}.");
+}
+var forwardedHeaders = new ForwardedHeadersOptions { ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto };
+forwardedHeaders.KnownNetworks.Clear();
+forwardedHeaders.KnownProxies.Clear();
+app.UseForwardedHeaders(forwardedHeaders);
+if (app.Environment.IsProduction() || app.Configuration.GetValue<bool>("Database:ApplyMigrationsOnStartup"))
+{
+    try
+    {
+        using var scope = app.Services.CreateScope();
+        var database = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await database.Database.OpenConnectionAsync();
+        await using (var command = database.Database.GetDbConnection().CreateCommand())
+        {
+            command.CommandText = "PRAGMA journal_mode=WAL;";
+            await command.ExecuteScalarAsync();
+        }
+        await database.Database.CloseConnectionAsync();
+        await database.Database.MigrateAsync();
+    }
+    catch (Exception exception)
+    {
+        app.Logger.LogCritical(exception, "SQLite initialization or EF migration failed; application startup is stopping.");
+        throw;
+    }
+}
 var startupLogger = app.Services.GetRequiredService<ILogger<Program>>();
 startupLogger.LogInformation("Application started. Local log file: {LogFilePath}", fileLoggerProvider.LogFilePath);
 
@@ -80,6 +125,65 @@ app.Use(async (context, next) =>
             System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds);
         throw;
     }
+});
+
+var appAuthProtector = app.Services.GetRequiredService<IDataProtectionProvider>().CreateProtector("BulkEmailSender.ApplicationLogin.v1");
+app.Use(async (context, next) =>
+{
+    if (string.IsNullOrWhiteSpace(app.Configuration["AppAuth:PasswordHash"]) ||
+        !context.Request.Path.StartsWithSegments("/api") || context.Request.Path == "/api/health" ||
+        context.Request.Path.StartsWithSegments("/api/auth/login") ||
+        context.Request.Path.StartsWithSegments("/api/auth/logout") ||
+        context.Request.Path.StartsWithSegments("/api/auth/session") ||
+        context.Request.Path == "/api/auth/google/callback")
+    {
+        await next();
+        return;
+    }
+    try
+    {
+        var ticket = context.Request.Cookies["bulk-email-auth"] is { } cookie ? appAuthProtector.Unprotect(cookie) : "";
+        var parts = ticket.Split('|', 2);
+        if (parts.Length == 2 && long.TryParse(parts[1], out var expiry) && expiry > DateTimeOffset.UtcNow.ToUnixTimeSeconds())
+        {
+            await next();
+            return;
+        }
+    }
+    catch (System.Security.Cryptography.CryptographicException) { }
+    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+});
+
+app.MapPost("/api/auth/login", (LoginRequest request, HttpContext context, IConfiguration configuration) =>
+{
+    var encoded = configuration["AppAuth:PasswordHash"];
+    if (string.IsNullOrWhiteSpace(encoded) || !VerifyPassword(request.Password ?? "", encoded))
+        return Results.Unauthorized();
+    var expiry = DateTimeOffset.UtcNow.AddHours(12);
+    context.Response.Cookies.Append("bulk-email-auth", appAuthProtector.Protect($"single-user|{expiry.ToUnixTimeSeconds()}"), new CookieOptions
+    {
+        HttpOnly = true, Secure = context.Request.IsHttps, SameSite = SameSiteMode.Strict,
+        IsEssential = true, Expires = expiry, Path = "/"
+    });
+    return Results.Ok(new { authenticated = true });
+});
+app.MapPost("/api/auth/logout", (HttpContext context) =>
+{
+    context.Response.Cookies.Delete("bulk-email-auth", new CookieOptions { HttpOnly = true, Secure = context.Request.IsHttps, SameSite = SameSiteMode.Strict, Path = "/" });
+    return Results.NoContent();
+});
+app.MapGet("/api/auth/session", (HttpContext context, IConfiguration configuration, IWebHostEnvironment environment) =>
+{
+    if (!environment.IsProduction() && string.IsNullOrWhiteSpace(configuration["AppAuth:PasswordHash"]))
+        return Results.Ok(new { authenticated = true });
+    try
+    {
+        var ticket = context.Request.Cookies["bulk-email-auth"] is { } cookie ? appAuthProtector.Unprotect(cookie) : "";
+        var parts = ticket.Split('|', 2);
+        return parts.Length == 2 && long.TryParse(parts[1], out var expiry) && expiry > DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+            ? Results.Ok(new { authenticated = true }) : Results.Unauthorized();
+    }
+    catch (System.Security.Cryptography.CryptographicException) { return Results.Unauthorized(); }
 });
 
 var sessionProtector = app.Services.GetRequiredService<IDataProtectionProvider>().CreateProtector("BulkEmailSender.BrowserSession.v1");
@@ -114,6 +218,8 @@ app.Use(async (context, next) =>
 });
 
 app.UseHttpsRedirection();
+app.UseDefaultFiles();
+app.UseStaticFiles();
 
 app.MapGet("/api/auth/google", async (GoogleOAuthService oauth, IOptions<GoogleOAuthOptions> options, CancellationToken ct) =>
 {
@@ -164,16 +270,20 @@ app.MapPost("/api/auth/google/disconnect", async (GoogleCredentialService creden
     return Results.NoContent();
 });
 
-app.MapGet("/api/health", (
-    ILogger<Program> logger) =>
+app.MapGet("/health", async (ApplicationDbContext db, CancellationToken ct) =>
 {
-    logger.LogInformation("Health endpoint checked.");
-
-    return Results.Ok(new
+    try
     {
-        status = "healthy"
-    });
+        if (!await db.Database.CanConnectAsync(ct))
+            return Results.Problem("Application database is unavailable.", statusCode: StatusCodes.Status503ServiceUnavailable);
+        return Results.Ok(new { status = "healthy" });
+    }
+    catch
+    {
+        return Results.Problem("Application database is unavailable.", statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
 });
+app.MapGet("/api/health", () => Results.Ok(new { status = "healthy" }));
 
 app.MapPost("/api/client-logs", (ClientLogRequest request, FrontendFileLogStore frontendLogs) =>
 {
@@ -389,6 +499,17 @@ app.MapGet(
         }
     });
 
+app.MapFallback(async context =>
+{
+    if (context.Request.Path.StartsWithSegments("/api"))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+    context.Response.ContentType = "text/html; charset=utf-8";
+    await context.Response.SendFileAsync(Path.Combine(app.Environment.WebRootPath ?? "wwwroot", "index.html"));
+});
+
 app.UseSwagger();
 app.UseSwaggerUI();
 app.Run();
@@ -417,5 +538,19 @@ static async Task WriteSseEventAsync(
         cancellationToken);
 }
 
+static bool VerifyPassword(string password, string encoded)
+{
+    try
+    {
+        var parts = encoded.Split('$');
+        if (parts.Length != 4 || parts[0] != "pbkdf2-sha256" || !int.TryParse(parts[1], out var iterations) || iterations < 100000) return false;
+        var salt = Convert.FromBase64String(parts[2]);
+        var expected = Convert.FromBase64String(parts[3]);
+        var actual = System.Security.Cryptography.Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, System.Security.Cryptography.HashAlgorithmName.SHA256, expected.Length);
+        return System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(actual, expected);
+    }
+    catch (FormatException) { return false; }
+}
 public sealed record ClientLogRequest(string Level, string? Category, string Message);
+public sealed record LoginRequest(string? Password);
 public partial class Program;

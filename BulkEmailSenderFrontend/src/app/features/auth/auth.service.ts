@@ -14,6 +14,18 @@ export class AuthService {
   readonly status = signal<GmailConnectionStatus>({ connected: false, emailAddress: null });
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
+  readonly authenticated = signal(false);
+
+  checkSession(): void {
+    this.http.get<{ authenticated: boolean }>('/api/auth/session').subscribe({
+      next: () => { this.authenticated.set(true); this.refresh(); },
+      error: () => { this.authenticated.set(false); this.loading.set(false); }
+    });
+  }
+  login(password: string): Observable<void> {
+    return this.http.post<void>('/api/auth/login', { password });
+  }
+  logout(): Observable<void> { return this.http.post<void>('/api/auth/logout', {}); }
 
   refresh(): void {
     this.loading.set(true);

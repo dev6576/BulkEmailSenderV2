@@ -108,3 +108,10 @@
 .gmail-button.secondary { border-color: #ead8c8; background: #fffaf5; }
 .gmail-button.secondary:hover { background: #fff0e2; }
 .auth-notice { border-color: #f4d3ad; background: #fff2df; color: #8e531f; }
+.login-panel { min-height: 100vh; display: grid; place-items: center; background: #fffaf5; font-family: Arial, sans-serif; }
+.login-panel form { width: min(360px, calc(100vw - 40px)); display: grid; gap: 14px; padding: 30px; border: 1px solid #f1dfcf; border-radius: 14px; background: white; box-shadow: 0 12px 36px #302b2712; }
+.login-panel h1 { margin: 0; color: #302b27; font-family: Georgia, serif; }
+.login-panel p { margin: 0; color: #625a52; }
+.login-panel label { font-size: 13px; font-weight: 600; color: #403a34; }
+.login-panel input { padding: 11px; border: 1px solid #d8cec2; border-radius: 7px; font: inherit; }
+.login-error { color: #b42318 !important; }

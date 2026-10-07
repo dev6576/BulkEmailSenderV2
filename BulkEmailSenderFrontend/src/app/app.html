@@ -1,3 +1,6 @@
+@if (!auth.authenticated()) {
+  <main class="login-panel"><form (ngSubmit)="login()"><h1>Bulk Email Sender</h1><p>Sign in to your private workspace.</p><label for="app-password">Application password</label><input id="app-password" name="password" type="password" autocomplete="current-password" [(ngModel)]="passwordValue" required><button type="submit" class="gmail-button">Sign in</button>@if (loginError()) { <p class="login-error" role="alert">{{ loginError() }}</p> }</form></main>
+} @else {
 <header class="app-header">
   <a class="app-brand" routerLink="/">Bulk Email Sender</a>
   <div class="gmail-status" aria-live="polite">
@@ -11,7 +14,9 @@
       <span>Gmail not connected</span>
       <button type="button" class="gmail-button" (click)="auth.connect()">Connect Gmail</button>
     }
+    <button type="button" class="gmail-button secondary" (click)="logout()">Log out</button>
   </div>
 </header>
 @if (auth.error()) { <div class="auth-notice" role="status">{{ auth.error() }}</div> }
 <router-outlet></router-outlet>
+}

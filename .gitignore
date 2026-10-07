@@ -72,6 +72,11 @@ pnpm-debug.log*
 .env.*
 !.env.example
 
+# Production deployment state and private backups
+deployment/.env
+deployment/data/
+deployment/backups/
+
 # Local development configuration
 
 appsettings.Development.json
