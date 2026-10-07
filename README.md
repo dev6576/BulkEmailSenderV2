@@ -19,7 +19,7 @@ Render supplies `PORT` to the container. The Docker entrypoint binds ASP.NET Cor
 
 ### Render environment variables
 
-Add these under the Web Service's **Environment** settings. Use **Secret** values for the Google client secret and application password hash.
+Add these under the Web Service's **Environment** settings. Use **Secret** values for the Google client secret and application password. Configure either `AppAuth__Password` with your chosen plaintext password, or `AppAuth__PasswordHash` with a generated PBKDF2 hash.
 
 | Name | Value |
 | --- | --- |
@@ -30,11 +30,12 @@ Add these under the Web Service's **Environment** settings. Use **Secret** value
 | `GoogleOAuth__ClientSecret` | Google OAuth web client secret (secret) |
 | `GoogleOAuth__RedirectUri` | `https://<actual-service-name>.onrender.com/api/auth/google/callback` |
 | `GoogleOAuth__AngularReturnUri` | `https://<actual-service-name>.onrender.com/` |
-| `AppAuth__PasswordHash` | PBKDF2 hash for the single-user application login (secret) |
+| `AppAuth__Password` | Your chosen single-user application login password (secret; plain text) |
+| `AppAuth__PasswordHash` | Optional PBKDF2 hash alternative to `AppAuth__Password` (secret) |
 
 Render sets `PORT`; do not manually add an `ASPNETCORE_URLS` value. The callback and return URLs must match the actual Render service hostname. If you later add a custom domain, update both OAuth URLs and the Google Cloud redirect URI to use it.
 
-Generate `AppAuth__PasswordHash` on a trusted machine. This reads the password without echo and emits the format the API expects:
+If you prefer not to store a plaintext password, generate `AppAuth__PasswordHash` on a trusted machine. This reads the password without echo and emits the format the API expects:
 
 ```sh
 python3 - <<'PY'

@@ -66,8 +66,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(databaseConnectionString));
 
 var app = builder.Build();
-if (app.Environment.IsProduction() && string.IsNullOrWhiteSpace(app.Configuration["AppAuth:PasswordHash"]))
-    throw new InvalidOperationException("AppAuth:PasswordHash must be configured in Production.");
+if (app.Environment.IsProduction() && !HasApplicationPassword(app.Configuration))
+    throw new InvalidOperationException("AppAuth:Password or AppAuth:PasswordHash must be configured in Production.");
 if (app.Environment.IsProduction())
 {
     var requiredGoogleSettings = new[]
@@ -130,7 +130,7 @@ app.Use(async (context, next) =>
 var appAuthProtector = app.Services.GetRequiredService<IDataProtectionProvider>().CreateProtector("BulkEmailSender.ApplicationLogin.v1");
 app.Use(async (context, next) =>
 {
-    if (string.IsNullOrWhiteSpace(app.Configuration["AppAuth:PasswordHash"]) ||
+    if (!HasApplicationPassword(app.Configuration) ||
         !context.Request.Path.StartsWithSegments("/api") || context.Request.Path == "/api/health" ||
         context.Request.Path.StartsWithSegments("/api/auth/login") ||
         context.Request.Path.StartsWithSegments("/api/auth/logout") ||
@@ -157,7 +157,12 @@ app.Use(async (context, next) =>
 app.MapPost("/api/auth/login", (LoginRequest request, HttpContext context, IConfiguration configuration) =>
 {
     var encoded = configuration["AppAuth:PasswordHash"];
-    if (string.IsNullOrWhiteSpace(encoded) || !VerifyPassword(request.Password ?? "", encoded))
+    var configuredPassword = configuration["AppAuth:Password"];
+    var suppliedPassword = request.Password ?? "";
+    var passwordMatches = !string.IsNullOrWhiteSpace(encoded)
+        ? VerifyPassword(suppliedPassword, encoded)
+        : !string.IsNullOrEmpty(configuredPassword) && FixedTimePasswordEquals(suppliedPassword, configuredPassword);
+    if (!passwordMatches)
         return Results.Unauthorized();
     var expiry = DateTimeOffset.UtcNow.AddHours(12);
     context.Response.Cookies.Append("bulk-email-auth", appAuthProtector.Protect($"single-user|{expiry.ToUnixTimeSeconds()}"), new CookieOptions
@@ -174,7 +179,7 @@ app.MapPost("/api/auth/logout", (HttpContext context) =>
 });
 app.MapGet("/api/auth/session", (HttpContext context, IConfiguration configuration, IWebHostEnvironment environment) =>
 {
-    if (!environment.IsProduction() && string.IsNullOrWhiteSpace(configuration["AppAuth:PasswordHash"]))
+    if (!environment.IsProduction() && !HasApplicationPassword(configuration))
         return Results.Ok(new { authenticated = true });
     try
     {
@@ -551,6 +556,19 @@ static bool VerifyPassword(string password, string encoded)
     }
     catch (FormatException) { return false; }
 }
+
+static bool HasApplicationPassword(IConfiguration configuration) =>
+    !string.IsNullOrEmpty(configuration["AppAuth:PasswordHash"]) ||
+    !string.IsNullOrEmpty(configuration["AppAuth:Password"]);
+
+static bool FixedTimePasswordEquals(string supplied, string configured)
+{
+    var suppliedBytes = System.Text.Encoding.UTF8.GetBytes(supplied);
+    var configuredBytes = System.Text.Encoding.UTF8.GetBytes(configured);
+    return suppliedBytes.Length == configuredBytes.Length &&
+        System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(suppliedBytes, configuredBytes);
+}
+
 public sealed record ClientLogRequest(string Level, string? Category, string Message);
 public sealed record LoginRequest(string? Password);
 public partial class Program;
