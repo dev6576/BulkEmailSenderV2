@@ -3,6 +3,7 @@
 } @else {
 <header class="app-header">
   <a class="app-brand" routerLink="/">Bulk Email Sender</a>
+  <div class="header-actions">
   <div class="gmail-status" aria-live="polite">
     <span class="gmail-dot" [class.connected]="auth.status().connected" [class.loading]="auth.loading()"></span>
     @if (auth.loading()) {
@@ -15,6 +16,20 @@
       <button type="button" class="gmail-button" (click)="auth.connect()">Connect Gmail</button>
     }
     <button type="button" class="gmail-button secondary" (click)="logout()">Log out</button>
+  </div>
+  <div class="settings-wrap">
+    <button type="button" class="gmail-button secondary settings-button" aria-haspopup="true" [attr.aria-expanded]="settingsOpen()" (click)="settingsOpen.update(open => !open)">⚙ <span>Settings</span></button>
+    @if (settingsOpen()) {
+      <section class="palette-menu" aria-label="Color palette settings">
+        <strong>UI color palette</strong>
+        @for (option of palettes; track option.id) {
+          <button type="button" class="palette-option" [class.selected]="palette() === option.id" [attr.aria-pressed]="palette() === option.id" (click)="setPalette(option.id)">
+            <span class="palette-swatch" [style.background]="option.color"></span>{{ option.label }}
+          </button>
+        }
+      </section>
+    }
+  </div>
   </div>
 </header>
 @if (auth.error()) { <div class="auth-notice" role="status">{{ auth.error() }}</div> }

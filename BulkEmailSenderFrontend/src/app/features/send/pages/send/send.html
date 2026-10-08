@@ -154,7 +154,7 @@
               [sanitize]="true"
               placeholder="Write your email..."
               (onEditorCreated)="onEditorCreated($event)"
-              [styles]="{ height: '420px' }">
+              [styles]="{ height: 'auto' }">
               </quill-editor>
             } @else {
               <div class="source-editor">
@@ -352,7 +352,7 @@
                   <div class="preview-attachments"><strong>Attachments:</strong> {{ previewAttachmentNames }}</div>
                 }
                 <div
-                  class="preview-email-content"
+                  class="ql-editor preview-email-content"
                   [innerHTML]="previewResponse()!.email!.htmlBody">
                 </div>
               </div>

@@ -309,15 +309,26 @@
 :host ::ng-deep .email-body-label .ql-container {
   position: relative;
   z-index: 1;
+  width: 100%;
+  max-width: 900px;
+  height: auto;
   border-radius: 0 0 6px 6px;
   font-family: inherit;
   font-size: 14px;
 }
 
+:host ::ng-deep .email-body-label .ql-toolbar {
+  width: 100%;
+  max-width: 900px;
+}
+
 :host ::ng-deep .email-body-label .ql-editor {
-  min-height: 420px;
+  min-height: 100px;
+  padding: 20px;
+  color: #302b27;
+  font-size: 14px;
   line-height: 1.5;
-  overflow-y: auto;
+  overflow-y: hidden;
 }
 
 :host ::ng-deep .email-body-label .ql-editor.ql-blank::before {
@@ -780,26 +791,30 @@ code {
 }
 
 .preview-email-content {
+  box-sizing: border-box;
+  height: auto;
+  overflow: visible;
   min-height: 100px;
-  color: #222;
+  padding: 20px;
+  color: #302b27;
   font-size: 14px;
   line-height: 1.5;
 }
 
-.preview-email-content img {
+:host ::ng-deep .preview-email-content img {
   max-width: 100%;
   height: auto;
 }
 
-.preview-email-content table {
+:host ::ng-deep .preview-email-content table {
   max-width: 100%;
   border-collapse: collapse;
 }
 
-.preview-email-content td,
-.preview-email-content th {
-  border: 1px solid #ccc;
-  padding: 6px 8px;
+:host ::ng-deep .preview-email-content td,
+:host ::ng-deep .preview-email-content th {
+  border: 1px solid #000;
+  padding: 2px 5px;
 }
 
 
