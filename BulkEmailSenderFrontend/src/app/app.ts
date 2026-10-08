@@ -1,8 +1,10 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink, RouterOutlet } from '@angular/router';
 import { AuthService } from './features/auth/auth.service';
 import { ClientLogger } from './logging/client-logger';
+
+type PaletteId = 'warm' | 'ocean' | 'forest' | 'lavender' | 'rose' | 'slate';
 
 @Component({
   selector: 'app-root',
@@ -11,11 +13,16 @@ import { ClientLogger } from './logging/client-logger';
   styleUrl: './app.css',
   host: {
     '[attr.data-palette]': 'palette()',
-    '[style.--ui-accent]': 'customization().accent',
-    '[style.--ui-logo-mark]': 'customization().logoMark',
-    '[style.--ui-logo-text]': 'customization().logoText',
-    '[style.--ui-active-tab-text]': 'customization().activeTabText',
-    '[style.--ui-active-tab-highlight]': 'customization().activeTabHighlight'
+    '[style.--ui-page]': 'paletteColors().page',
+    '[style.--ui-surface]': 'paletteColors().surface',
+    '[style.--ui-surface-alt]': 'paletteColors().surfaceAlt',
+    '[style.--ui-text]': 'paletteColors().text',
+    '[style.--ui-muted]': 'paletteColors().muted',
+    '[style.--ui-border]': 'paletteColors().border',
+    '[style.--ui-accent]': 'paletteColors().accent',
+    '[style.--ui-accent-hover]': 'paletteColors().accentHover',
+    '[style.--ui-accent-soft]': 'paletteColors().accentSoft',
+    '[style.--ui-accent-text]': 'paletteColors().accentText'
   }
 })
 export class App implements OnInit {
@@ -24,38 +31,21 @@ export class App implements OnInit {
   readonly loginError = signal('');
   readonly settingsOpen = signal(false);
   readonly palettes = [
-    { id: 'warm', label: 'Warm paper', color: '#a65037' },
-    { id: 'ocean', label: 'Ocean blue', color: '#155eef' },
-    { id: 'forest', label: 'Forest green', color: '#28735c' }
+    { id: 'warm', label: 'Warm paper', color: '#a65037', colors: { page: '#f4f0e9', surface: '#fbf8f2', surfaceAlt: '#f3eee6', text: '#302b27', muted: '#776d63', border: '#e3dacf', accent: '#bf642d', accentHover: '#a95020', accentSoft: '#fff0e2', accentText: '#fffaf5' } },
+    { id: 'ocean', label: 'Ocean blue', color: '#155eef', colors: { page: '#f4f7fb', surface: '#ffffff', surfaceAlt: '#edf4ff', text: '#182230', muted: '#667085', border: '#dbe3ef', accent: '#155eef', accentHover: '#004eeb', accentSoft: '#edf4ff', accentText: '#ffffff' } },
+    { id: 'forest', label: 'Forest green', color: '#28735c', colors: { page: '#f2f7f3', surface: '#fbfdfb', surfaceAlt: '#eaf3ec', text: '#20372b', muted: '#66796c', border: '#d7e4d9', accent: '#28735c', accentHover: '#205c49', accentSoft: '#eaf3ec', accentText: '#ffffff' } },
+    { id: 'lavender', label: 'Lavender', color: '#7657a6', colors: { page: '#f6f3fa', surface: '#fdfbff', surfaceAlt: '#eee8f7', text: '#332a40', muted: '#766c83', border: '#e1d8ed', accent: '#7657a6', accentHover: '#63458f', accentSoft: '#eee8f7', accentText: '#ffffff' } },
+    { id: 'rose', label: 'Rose', color: '#b44764', colors: { page: '#fbf3f4', surface: '#fffafb', surfaceAlt: '#f7e8eb', text: '#3e2b30', muted: '#806b71', border: '#ead7dc', accent: '#b44764', accentHover: '#983750', accentSoft: '#f7e8eb', accentText: '#ffffff' } },
+    { id: 'slate', label: 'Slate', color: '#536579', colors: { page: '#f1f4f6', surface: '#fbfcfd', surfaceAlt: '#e8edf1', text: '#263442', muted: '#687784', border: '#d6dee5', accent: '#536579', accentHover: '#405365', accentSoft: '#e8edf1', accentText: '#ffffff' } }
   ] as const;
-  readonly palette = signal<'warm' | 'ocean' | 'forest'>('warm');
-  readonly customization = signal({
-    accent: '#a65037',
-    logoMark: '#a65037',
-    logoText: '#302b27',
-    activeTabText: '#8f422d',
-    activeTabHighlight: '#a65037'
-  });
+  readonly palette = signal<PaletteId>('warm');
+  readonly paletteColors = computed(() => this.palettes.find(option => option.id === this.palette())!.colors);
   private readonly logger = inject(ClientLogger);
 
   ngOnInit(): void {
     const savedPalette = localStorage.getItem('bulk-email-ui-palette');
-    if (savedPalette === 'warm' || savedPalette === 'ocean' || savedPalette === 'forest') {
-      this.palette.set(savedPalette);
-      this.applyPaletteDefaults(savedPalette);
-    }
-    const savedCustomization = localStorage.getItem('bulk-email-ui-colors');
-    if (savedCustomization) {
-      try {
-        const colors = JSON.parse(savedCustomization) as Record<string, unknown>;
-        this.customization.set({
-          accent: this.validColor(colors['accent'], '#a65037'),
-          logoMark: this.validColor(colors['logoMark'], '#a65037'),
-          logoText: this.validColor(colors['logoText'], '#302b27'),
-          activeTabText: this.validColor(colors['activeTabText'], '#8f422d'),
-          activeTabHighlight: this.validColor(colors['activeTabHighlight'], '#a65037')
-        });
-      } catch { /* Ignore malformed saved color preferences. */ }
+    if (this.palettes.some(option => option.id === savedPalette)) {
+      this.palette.set(savedPalette as PaletteId);
     }
     this.logger.write('info', 'Application', 'Frontend application initialized.');
     this.auth.checkSession();
@@ -68,32 +58,10 @@ export class App implements OnInit {
     }
   }
 
-  setPalette(palette: 'warm' | 'ocean' | 'forest'): void {
+  setPalette(palette: PaletteId): void {
     this.palette.set(palette);
-    this.applyPaletteDefaults(palette);
     localStorage.setItem('bulk-email-ui-palette', palette);
     this.settingsOpen.set(false);
-  }
-
-  private applyPaletteDefaults(palette: 'warm' | 'ocean' | 'forest'): void {
-    const colors = {
-      warm: { accent: '#bf642d', logoMark: '#a65037', logoText: '#302b27', activeTabText: '#a95020', activeTabHighlight: '#d8783d' },
-      ocean: { accent: '#155eef', logoMark: '#155eef', logoText: '#172b4d', activeTabText: '#155eef', activeTabHighlight: '#155eef' },
-      forest: { accent: '#28735c', logoMark: '#28735c', logoText: '#20372b', activeTabText: '#28735c', activeTabHighlight: '#28735c' }
-    }[palette];
-    this.customization.update(current => ({ ...current, ...colors }));
-    localStorage.setItem('bulk-email-ui-colors', JSON.stringify(this.customization()));
-  }
-
-  updateColor(key: 'accent' | 'logoMark' | 'logoText' | 'activeTabText' | 'activeTabHighlight', value: string): void {
-    if (!/^#[0-9a-fA-F]{6}$/.test(value)) return;
-    const colors = { ...this.customization(), [key]: value };
-    this.customization.set(colors);
-    localStorage.setItem('bulk-email-ui-colors', JSON.stringify(colors));
-  }
-
-  private validColor(value: unknown, fallback: string): string {
-    return typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value) ? value : fallback;
   }
 
   login(): void { this.loginError.set(''); this.auth.login(this.passwordValue).subscribe({ next: () => { this.passwordValue = ''; this.auth.authenticated.set(true); this.auth.refresh(); }, error: () => this.loginError.set('Password was not accepted.') }); }

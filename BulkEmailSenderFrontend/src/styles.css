@@ -58,35 +58,29 @@ app-send {
 app-root[data-palette="ocean"] .send-page { color: #182230; background: #f4f7fb; }
 app-root[data-palette="ocean"] .send-header h1,
 app-root[data-palette="ocean"] .section-heading h2,
-app-root[data-palette="ocean"] .preview-dock-header h2,
 app-root[data-palette="ocean"] .send-confirmation h2 { color: #172b4d; }
 app-root[data-palette="ocean"] .send-tabs { border-color: #e2e8f0; }
-app-root[data-palette="ocean"] .send-tab.active { color: var(--ui-active-tab-text, #155eef); border-bottom-color: var(--ui-active-tab-highlight, #155eef); }
-app-root[data-palette="ocean"] .send-tab:hover { color: var(--ui-active-tab-text, #155eef); background: #edf4ff; }
+app-root[data-palette="ocean"] .send-tab.active { color: var(--ui-accent, #155eef); border-bottom-color: var(--ui-accent, #155eef); }
+app-root[data-palette="ocean"] .send-tab:hover { color: var(--ui-accent, #155eef); background: #edf4ff; }
 app-root[data-palette="ocean"] .send-button,
 app-root[data-palette="ocean"] .send-progress-bar { border-color: var(--ui-accent, #155eef); background: var(--ui-accent, #155eef); }
-app-root[data-palette="ocean"] .send-action-bar,
-app-root[data-palette="ocean"] .preview-dock-header { border-color: #e2e8f0; background: #fff; }
-app-root[data-palette="ocean"] .preview-dock { border-color: #dbe3ef; background: #f7f9fc; }
+app-root[data-palette="ocean"] .send-action-bar { border-color: #e2e8f0; background: #fff; }
 
 app-root[data-palette="forest"] .send-page { color: #273b30; background: #f2f7f3; }
 app-root[data-palette="forest"] .send-header h1,
 app-root[data-palette="forest"] .section-heading h2,
-app-root[data-palette="forest"] .preview-dock-header h2,
 app-root[data-palette="forest"] .send-confirmation h2 { color: #20372b; }
 app-root[data-palette="forest"] .send-tabs { border-color: #d7e4d9; }
-app-root[data-palette="forest"] .send-tab.active { color: var(--ui-active-tab-text, #28735c); border-bottom-color: var(--ui-active-tab-highlight, #28735c); }
-app-root[data-palette="forest"] .send-tab:hover { color: var(--ui-active-tab-text, #28735c); background: #eaf3ec; }
+app-root[data-palette="forest"] .send-tab.active { color: var(--ui-accent, #28735c); border-bottom-color: var(--ui-accent, #28735c); }
+app-root[data-palette="forest"] .send-tab:hover { color: var(--ui-accent, #28735c); background: #eaf3ec; }
 app-root[data-palette="forest"] .send-button,
 app-root[data-palette="forest"] .send-progress-bar { border-color: var(--ui-accent, #28735c); background: var(--ui-accent, #28735c); }
-app-root[data-palette="forest"] .send-action-bar,
-app-root[data-palette="forest"] .preview-dock-header { border-color: #d7e4d9; background: #fbfdfb; }
-app-root[data-palette="forest"] .preview-dock { border-color: #d0dfd3; background: #eaf1eb; }
+app-root[data-palette="forest"] .send-action-bar { border-color: #d7e4d9; background: #fbfdfb; }
 
 app-root[data-palette] .gmail-button:not(.secondary) { border-color: var(--ui-accent, #bf642d); background: var(--ui-accent, #bf642d); }
 app-root[data-palette] .send-page .send-button,
 app-root[data-palette] .send-page .send-progress-bar { border-color: var(--ui-accent, #bf642d); background: var(--ui-accent, #bf642d); }
-app-root[data-palette] .send-tab.active { color: var(--ui-active-tab-text, #a95020); border-bottom-color: var(--ui-active-tab-highlight, #d8783d); }
+app-root[data-palette] .send-tab.active { color: var(--ui-accent, #a95020); border-bottom-color: var(--ui-accent, #d8783d); }
 
 /* Composer additions */
 .email-editor { padding-bottom: 20px; }
@@ -128,3 +122,138 @@ app-root[data-palette] .send-tab.active { color: var(--ui-active-tab-text, #a950
   .dialog-backdrop { padding: 12px; }
   .confirmation-actions { flex-wrap: wrap; }
 }
+
+/* Palette tokens cover application chrome and editing controls. Preview
+   classes and the editable email body are intentionally excluded. */
+app-root[data-palette] .app-header,
+app-root[data-palette] .login-panel { background: var(--ui-page) !important; border-color: var(--ui-border) !important; color: var(--ui-text) !important; }
+app-root[data-palette] .login-panel h1,
+app-root[data-palette] .login-panel label { color: var(--ui-text) !important; }
+app-root[data-palette] .login-panel p { color: var(--ui-muted) !important; }
+app-root[data-palette] .app-brand { color: var(--ui-text) !important; }
+app-root[data-palette] .app-brand::before { color: var(--ui-accent) !important; background: var(--ui-accent-soft) !important; border-color: var(--ui-border) !important; }
+app-root[data-palette] .gmail-status,
+app-root[data-palette] .gmail-status small { color: var(--ui-muted) !important; }
+app-root[data-palette] .gmail-button:not(.secondary),
+app-root[data-palette] .send-page .send-button,
+app-root[data-palette] .recipient-input .primary-button,
+app-root[data-palette] .recipient-input .validate-button,
+app-root[data-palette] .recipient-input .file-button { color: var(--ui-accent-text) !important; background: var(--ui-accent) !important; border-color: var(--ui-accent) !important; }
+app-root[data-palette] .gmail-button:not(.secondary):hover,
+app-root[data-palette] .send-page .send-button:hover:not(:disabled),
+app-root[data-palette] .recipient-input .primary-button:hover,
+app-root[data-palette] .recipient-input .validate-button:hover:not(:disabled),
+app-root[data-palette] .recipient-input .file-button:hover { background: var(--ui-accent-hover) !important; border-color: var(--ui-accent-hover) !important; }
+app-root[data-palette] .gmail-button.secondary,
+app-root[data-palette] .recipient-input .secondary-button,
+app-root[data-palette] .recipient-input .grid-preview-button,
+app-root[data-palette] .recipient-input .delete-button { color: var(--ui-text) !important; background: var(--ui-surface) !important; border-color: var(--ui-border) !important; }
+app-root[data-palette] .gmail-button.secondary:hover,
+app-root[data-palette] .recipient-input .secondary-button:hover:not(:disabled),
+app-root[data-palette] .recipient-input .grid-preview-button:hover,
+app-root[data-palette] .recipient-input .delete-button:hover { background: var(--ui-accent-soft) !important; border-color: var(--ui-accent) !important; }
+app-root[data-palette] .send-page { color: var(--ui-text) !important; background: var(--ui-page) !important; }
+app-root[data-palette] .send-header h1,
+app-root[data-palette] .section-heading h2,
+app-root[data-palette] .send-confirmation h2,
+app-root[data-palette] .recipient-header h2 { color: var(--ui-text) !important; }
+app-root[data-palette] .section-heading p,
+app-root[data-palette] .send-readiness,
+app-root[data-palette] .recipient-header p,
+app-root[data-palette] .recipient-footer { color: var(--ui-muted) !important; }
+app-root[data-palette] .send-tabs { border-color: var(--ui-border) !important; }
+app-root[data-palette] .send-tab { color: var(--ui-muted) !important; }
+app-root[data-palette] .send-tab:hover { color: var(--ui-accent) !important; background: var(--ui-accent-soft) !important; }
+app-root[data-palette] .send-tab.active { color: var(--ui-accent) !important; border-bottom-color: var(--ui-accent) !important; }
+app-root[data-palette] .send-action-bar,
+app-root[data-palette] .send-progress-panel,
+app-root[data-palette] .email-editor,
+app-root[data-palette] .template-help,
+app-root[data-palette] .recipient-input,
+app-root[data-palette] .add-column-panel,
+app-root[data-palette] .validation-summary,
+app-root[data-palette] .send-confirmation { color: var(--ui-text) !important; background-color: var(--ui-surface) !important; border-color: var(--ui-border) !important; }
+app-root[data-palette] .template-help { background-color: var(--ui-surface-alt) !important; }
+app-root[data-palette] .template-field,
+app-root[data-palette] .attach-button,
+app-root[data-palette] .remove-attachment { color: var(--ui-text) !important; background-color: var(--ui-surface) !important; border-color: var(--ui-border) !important; }
+app-root[data-palette] .email-editor input,
+app-root[data-palette] .add-column-panel input { color: var(--ui-text) !important; background-color: var(--ui-surface) !important; border-color: var(--ui-border) !important; }
+app-root[data-palette] .editor-mode { color: var(--ui-muted) !important; background: var(--ui-surface-alt) !important; border-color: var(--ui-border) !important; }
+app-root[data-palette] .editor-mode button { color: var(--ui-muted) !important; }
+app-root[data-palette] .editor-mode button.active { color: var(--ui-accent) !important; background: var(--ui-surface) !important; }
+app-root[data-palette] .email-body-label .ql-toolbar { background: var(--ui-surface-alt) !important; border-color: var(--ui-border) !important; }
+app-root[data-palette] .email-body-label .ql-container { border-color: var(--ui-border) !important; }
+app-root[data-palette] .recipient-grid .ag-root-wrapper,
+app-root[data-palette] .recipient-grid .ag-header,
+app-root[data-palette] .recipient-grid .ag-paging-panel,
+app-root[data-palette] .recipient-grid .ag-menu,
+app-root[data-palette] .recipient-grid .ag-popup { color: var(--ui-text) !important; background-color: var(--ui-surface) !important; border-color: var(--ui-border) !important; }
+app-root[data-palette] .recipient-grid .ag-header-cell,
+app-root[data-palette] .recipient-grid .ag-row { color: var(--ui-text) !important; background-color: var(--ui-surface) !important; border-color: var(--ui-border) !important; }
+app-root[data-palette] .recipient-grid .ag-row-hover .ag-cell { background-color: var(--ui-surface-alt) !important; }
+app-root[data-palette] .recipient-grid .ag-row-selected::before { background-color: var(--ui-accent-soft) !important; }
+app-root[data-palette] .recipient-grid .ag-header-cell-text,
+app-root[data-palette] .recipient-grid .ag-cell { color: var(--ui-text) !important; }
+app-root[data-palette] .auth-notice { color: var(--ui-text) !important; background: var(--ui-accent-soft) !important; border-color: var(--ui-border) !important; }
+app-root[data-palette] .palette-menu { color: var(--ui-text) !important; background: var(--ui-surface) !important; border-color: var(--ui-border) !important; }
+app-root[data-palette] .palette-option { color: var(--ui-text) !important; }
+app-root[data-palette] .palette-option:hover,
+app-root[data-palette] .palette-option.selected { background: var(--ui-accent-soft) !important; }
+app-root[data-palette] button:not(.preview-dock button):not(.preview-email-content button):not(.ql-editor button) { color: var(--ui-text) !important; background-color: var(--ui-surface) !important; border-color: var(--ui-border) !important; }
+app-root[data-palette] button:not(.preview-dock button):not(.preview-email-content button):not(.ql-editor button):hover:not(:disabled) { color: var(--ui-accent) !important; background-color: var(--ui-accent-soft) !important; border-color: var(--ui-accent) !important; }
+app-root[data-palette] button:not(.preview-dock button):not(.preview-email-content button):not(.ql-editor button):active:not(:disabled) { background-color: var(--ui-accent-soft) !important; }
+app-root[data-palette] button:not(.preview-dock button):not(.preview-email-content button):not(.ql-editor button):disabled { color: var(--ui-muted) !important; }
+app-root[data-palette] button:not(.preview-dock button):not(.preview-email-content button):not(.ql-editor button).active,
+app-root[data-palette] button:not(.preview-dock button):not(.preview-email-content button):not(.ql-editor button).selected,
+app-root[data-palette] button:not(.preview-dock button):not(.preview-email-content button):not(.ql-editor button)[aria-pressed="true"] { color: var(--ui-accent) !important; background-color: var(--ui-accent-soft) !important; border-color: var(--ui-accent) !important; }
+app-root[data-palette] .send-tab.active { color: var(--ui-accent) !important; background: transparent !important; border-bottom-color: var(--ui-accent) !important; }
+app-root[data-palette] .send-tab:hover { color: var(--ui-accent) !important; background: var(--ui-accent-soft) !important; }
+app-root[data-palette] .gmail-button:not(.secondary),
+app-root[data-palette] .send-page .send-button,
+app-root[data-palette] .recipient-input .primary-button,
+app-root[data-palette] .recipient-input .validate-button,
+app-root[data-palette] .recipient-input .file-button { color: var(--ui-accent-text) !important; background: var(--ui-accent) !important; border-color: var(--ui-accent) !important; }
+app-root[data-palette] .gmail-button:not(.secondary):hover,
+app-root[data-palette] .send-page .send-button:hover:not(:disabled),
+app-root[data-palette] .recipient-input .primary-button:hover,
+app-root[data-palette] .recipient-input .validate-button:hover:not(:disabled),
+app-root[data-palette] .recipient-input .file-button:hover { color: var(--ui-accent-text) !important; background: var(--ui-accent-hover) !important; border-color: var(--ui-accent-hover) !important; }
+app-root[data-palette] .recipient-grid .ag-row-selected::before { background-color: var(--ui-accent-soft) !important; }
+app-root[data-palette] .ql-toolbar button.ql-active { background-color: var(--ui-accent-soft) !important; }
+app-root[data-palette] .ql-toolbar button .ql-stroke { stroke: var(--ui-text) !important; }
+app-root[data-palette] .ql-toolbar button .ql-fill { fill: var(--ui-text) !important; }
+app-root[data-palette] .ql-toolbar button.ql-active .ql-stroke { stroke: var(--ui-accent) !important; }
+app-root[data-palette] .ql-toolbar button.ql-active .ql-fill { fill: var(--ui-accent) !important; }
+app-root[data-palette] .ql-toolbar .ql-picker { color: var(--ui-text) !important; }
+app-root[data-palette] .ql-toolbar .ql-picker-options { color: var(--ui-text) !important; background-color: var(--ui-surface) !important; border-color: var(--ui-border) !important; }
+app-root[data-palette] .subject-field,
+app-root[data-palette] .email-body-label,
+app-root[data-palette] .attachments-heading,
+app-root[data-palette] .template-help,
+app-root[data-palette] .template-help-note,
+app-root[data-palette] .attachments-section,
+app-root[data-palette] .attachment-list li,
+app-root[data-palette] .recipient-summary,
+app-root[data-palette] .recipient-header,
+app-root[data-palette] .add-column-panel,
+app-root[data-palette] .send-confirmation dl { color: var(--ui-text) !important; border-color: var(--ui-border) !important; }
+app-root[data-palette] .section-heading p,
+app-root[data-palette] .send-action-info,
+app-root[data-palette] .send-readiness,
+app-root[data-palette] .recipient-header p,
+app-root[data-palette] .recipient-footer,
+app-root[data-palette] .template-help { color: var(--ui-muted) !important; }
+app-root[data-palette] .template-help strong,
+app-root[data-palette] .send-action-info strong { color: var(--ui-accent) !important; }
+app-root[data-palette] input:not(.preview-dock input):not(.preview-email-content input):not(.ql-editor input),
+app-root[data-palette] textarea:not(.preview-dock textarea):not(.preview-email-content textarea):not(.ql-editor textarea) { color: var(--ui-text) !important; background-color: var(--ui-surface) !important; border-color: var(--ui-border) !important; }
+app-root[data-palette] .preview-dock { color: #302b27 !important; }
+app-root[data-palette] button:not(.preview-dock button):not(.preview-email-content button):not(.ql-editor button):focus-visible,
+app-root[data-palette] input:not(.preview-dock input):not(.preview-email-content input):not(.ql-editor input):focus-visible,
+app-root[data-palette] textarea:not(.preview-dock textarea):not(.preview-email-content textarea):not(.ql-editor textarea):focus-visible { outline-color: color-mix(in srgb, var(--ui-accent) 38%, transparent) !important; }
+app-root[data-palette] .send-confirmation dl > div,
+app-root[data-palette] .attachment-list,
+app-root[data-palette] .attachment-list li,
+app-root[data-palette] .attachments-section,
+app-root[data-palette] .template-help-note { border-color: var(--ui-border) !important; }
