@@ -31,12 +31,12 @@ export class App implements OnInit {
   readonly loginError = signal('');
   readonly settingsOpen = signal(false);
   readonly palettes = [
-    { id: 'warm', label: 'Warm paper', color: '#a65037', colors: { page: '#f4f0e9', surface: '#fbf8f2', surfaceAlt: '#f3eee6', text: '#302b27', muted: '#776d63', border: '#e3dacf', accent: '#bf642d', accentHover: '#a95020', accentSoft: '#fff0e2', accentText: '#fffaf5' } },
-    { id: 'ocean', label: 'Ocean blue', color: '#155eef', colors: { page: '#f4f7fb', surface: '#ffffff', surfaceAlt: '#edf4ff', text: '#182230', muted: '#667085', border: '#dbe3ef', accent: '#155eef', accentHover: '#004eeb', accentSoft: '#edf4ff', accentText: '#ffffff' } },
-    { id: 'forest', label: 'Forest green', color: '#28735c', colors: { page: '#f2f7f3', surface: '#fbfdfb', surfaceAlt: '#eaf3ec', text: '#20372b', muted: '#66796c', border: '#d7e4d9', accent: '#28735c', accentHover: '#205c49', accentSoft: '#eaf3ec', accentText: '#ffffff' } },
-    { id: 'lavender', label: 'Lavender', color: '#7657a6', colors: { page: '#f6f3fa', surface: '#fdfbff', surfaceAlt: '#eee8f7', text: '#332a40', muted: '#766c83', border: '#e1d8ed', accent: '#7657a6', accentHover: '#63458f', accentSoft: '#eee8f7', accentText: '#ffffff' } },
-    { id: 'rose', label: 'Rose', color: '#b44764', colors: { page: '#fbf3f4', surface: '#fffafb', surfaceAlt: '#f7e8eb', text: '#3e2b30', muted: '#806b71', border: '#ead7dc', accent: '#b44764', accentHover: '#983750', accentSoft: '#f7e8eb', accentText: '#ffffff' } },
-    { id: 'slate', label: 'Slate', color: '#536579', colors: { page: '#f1f4f6', surface: '#fbfcfd', surfaceAlt: '#e8edf1', text: '#263442', muted: '#687784', border: '#d6dee5', accent: '#536579', accentHover: '#405365', accentSoft: '#e8edf1', accentText: '#ffffff' } }
+    { id: 'warm', label: 'Warm Rachenahalli Red', color: '#a65037', colors: { page: '#f4f0e9', surface: '#fbf8f2', surfaceAlt: '#f3eee6', text: '#302b27', muted: '#776d63', border: '#e3dacf', accent: '#bf642d', accentHover: '#a95020', accentSoft: '#fff0e2', accentText: '#fffaf5' } },
+    { id: 'ocean', label: 'Varakala Ocean Blue', color: '#155eef', colors: { page: '#f4f7fb', surface: '#ffffff', surfaceAlt: '#edf4ff', text: '#182230', muted: '#667085', border: '#dbe3ef', accent: '#155eef', accentHover: '#004eeb', accentSoft: '#edf4ff', accentText: '#ffffff' } },
+    { id: 'forest', label: 'Cubbon Park Green', color: '#28735c', colors: { page: '#f2f7f3', surface: '#fbfdfb', surfaceAlt: '#eaf3ec', text: '#20372b', muted: '#66796c', border: '#d7e4d9', accent: '#28735c', accentHover: '#205c49', accentSoft: '#eaf3ec', accentText: '#ffffff' } },
+    { id: 'lavender', label: 'Kamanahalli Lavender', color: '#7657a6', colors: { page: '#f6f3fa', surface: '#fdfbff', surfaceAlt: '#eee8f7', text: '#332a40', muted: '#766c83', border: '#e1d8ed', accent: '#7657a6', accentHover: '#63458f', accentSoft: '#eee8f7', accentText: '#ffffff' } },
+    { id: 'rose', label: 'Switzerland Rose', color: '#b44764', colors: { page: '#fbf3f4', surface: '#fffafb', surfaceAlt: '#f7e8eb', text: '#3e2b30', muted: '#806b71', border: '#ead7dc', accent: '#b44764', accentHover: '#983750', accentSoft: '#f7e8eb', accentText: '#ffffff' } },
+    { id: 'slate', label: 'Hong Kong Slate', color: '#536579', colors: { page: '#f1f4f6', surface: '#fbfcfd', surfaceAlt: '#e8edf1', text: '#263442', muted: '#687784', border: '#d6dee5', accent: '#536579', accentHover: '#405365', accentSoft: '#e8edf1', accentText: '#ffffff' } }
   ] as const;
   readonly palette = signal<PaletteId>('warm');
   readonly paletteColors = computed(() => this.palettes.find(option => option.id === this.palette())!.colors);

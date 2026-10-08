@@ -1146,6 +1146,14 @@ code {
   background: var(--ui-surface, #fbf8f2);
   color: var(--ui-text, #302b27);
 }
+.preview-dock {
+  border-top-color: var(--ui-border, #e3dacf);
+  background: var(--ui-surface-alt, #f3eee6);
+}
+.preview-dock-content {
+  background: var(--ui-page, #f4f0e9);
+  color: var(--ui-text, #302b27);
+}
 .preview-dock-header h2 { color: var(--ui-text, #302b27); }
 .preview-recipient { color: var(--ui-muted, #776d63); }
 .preview-toggle-button {
