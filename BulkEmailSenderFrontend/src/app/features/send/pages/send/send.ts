@@ -380,6 +380,16 @@ export class Send {
 
   }
 
+  /** Keep requests based on Quill's current semantic HTML, including blank
+   * paragraphs visible in the editor, rather than a stale form snapshot. */
+  private syncBodyFromVisualEditor(): void {
+    if (this.sourceMode() !== 'visual' || !this.emailEditor) return;
+    const currentHtml = this.emailEditor.getSemanticHTML();
+    if (currentHtml !== this.emailForm.controls.body.value) {
+      this.emailForm.controls.body.setValue(currentHtml);
+    }
+  }
+
   get attachmentsArray(): FormArray<FormControl<string>> {
     return this.emailForm.controls.attachments;
   }
@@ -717,6 +727,8 @@ export class Send {
       return;
     }
 
+    this.syncBodyFromVisualEditor();
+
     if (this.emailForm.invalid) {
 
       this.activeTab.set('template');
@@ -851,6 +863,8 @@ export class Send {
       this.selectedRecipients =
         this.recipientInput.commitEditingAndGetSelectedRecipients();
     }
+
+    this.syncBodyFromVisualEditor();
 
 
     /*
@@ -988,6 +1002,7 @@ export class Send {
 
   confirmSendEmails(): void {
     if (this.isSending() || this.selectedRecipients.length === 0) return;
+    this.syncBodyFromVisualEditor();
     this.showSendConfirmation.set(false);
     const formValue = this.emailForm.getRawValue();
     const request = {

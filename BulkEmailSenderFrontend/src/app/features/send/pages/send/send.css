@@ -795,7 +795,9 @@ code {
   height: auto;
   overflow: visible;
   min-height: 100px;
-  padding: 20px;
+  /* The preview card already contributes the same 20px inset as the
+     editor's .ql-editor, so the body itself must not add a second inset. */
+  padding: 0;
   color: #302b27;
   font-size: 14px;
   line-height: 1.5;
