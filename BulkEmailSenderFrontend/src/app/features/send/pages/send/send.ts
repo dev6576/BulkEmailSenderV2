@@ -1,6 +1,8 @@
 import {
   Component,
+  DestroyRef,
   NgZone,
+  OnInit,
   ViewChild,
   inject,
   signal
@@ -27,6 +29,8 @@ import Quill from 'quill';
 import QuillTableBetter from 'quill-table-better';
 
 import QuillResize from 'quill-resize-module';
+import { debounceTime, distinctUntilChanged } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import {
   SendApiService
@@ -72,7 +76,7 @@ type SendTab =
 
   styleUrl: './send.css'
 })
-export class Send {
+export class Send implements OnInit {
 
   readonly maxAttachmentFileSize = 10 * 1024 * 1024;
   readonly maxTotalAttachmentSize = 25 * 1024 * 1024;
@@ -101,6 +105,33 @@ export class Send {
   recipientInput?: RecipientInput;
 
   private emailEditor?: Quill;
+  private previewRequestSequence = 0;
+  private lastPreviewedBody = '';
+  private readonly destroyRef = inject(DestroyRef);
+
+  ngOnInit(): void {
+    this.emailForm.controls.body.valueChanges
+      .pipe(
+        debounceTime(300),
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(body => {
+        if (
+          body === this.lastPreviewedBody ||
+          !this.selectedRecipient ||
+          !this.isPreviewDockOpen() ||
+          this.showSendConfirmation() ||
+          this.isSending()
+        ) {
+          return;
+        }
+
+        this.previewResponse.set(null);
+        this.previewError.set(null);
+        this.preview();
+      });
+  }
 
 
   /* =========================================================
@@ -380,11 +411,12 @@ export class Send {
 
   }
 
-  /** Keep requests based on Quill's current semantic HTML, including blank
-   * paragraphs visible in the editor, rather than a stale form snapshot. */
+  /** Keep requests based on Quill's live DOM. getSemanticHTML() normalizes
+   * empty paragraph blocks, which can drop the deliberate blank lines the
+   * editor displays. The preview and send paths both use this same HTML. */
   private syncBodyFromVisualEditor(): void {
     if (this.sourceMode() !== 'visual' || !this.emailEditor) return;
-    const currentHtml = this.emailEditor.getSemanticHTML();
+    const currentHtml = this.emailEditor.root.innerHTML;
     if (currentHtml !== this.emailForm.controls.body.value) {
       this.emailForm.controls.body.setValue(currentHtml);
     }
@@ -728,6 +760,8 @@ export class Send {
     }
 
     this.syncBodyFromVisualEditor();
+    const requestSequence = ++this.previewRequestSequence;
+    this.isPreviewLoading.set(false);
 
     if (this.emailForm.invalid) {
 
@@ -768,6 +802,7 @@ export class Send {
 
     const formValue =
       this.emailForm.getRawValue();
+    this.lastPreviewedBody = formValue.body;
 
 
     const request = {
@@ -805,6 +840,8 @@ export class Send {
 
         next: response => {
 
+          if (requestSequence !== this.previewRequestSequence) return;
+
           console.log(
             'PREVIEW RESPONSE:',
             response
@@ -821,6 +858,8 @@ export class Send {
         },
 
         error: error => {
+
+          if (requestSequence !== this.previewRequestSequence) return;
 
           console.error(
             'PREVIEW ERROR:',

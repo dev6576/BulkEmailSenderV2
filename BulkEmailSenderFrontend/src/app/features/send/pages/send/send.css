@@ -331,6 +331,18 @@
   overflow-y: hidden;
 }
 
+/* Make Quill's empty paragraph used for a deliberate blank line occupy one
+   normal text line in both the editable canvas and the rendered preview. */
+:host ::ng-deep .email-body-label .ql-editor p:empty,
+:host ::ng-deep .email-body-label .ql-editor p:has(> br:only-child),
+:host ::ng-deep .preview-email-content p:empty,
+:host ::ng-deep .preview-email-content p:has(> br:only-child) {
+  display: block;
+  height: 1.5em;
+  min-height: 1.5em;
+  line-height: 1.5em;
+}
+
 :host ::ng-deep .email-body-label .ql-editor.ql-blank::before {
   color: #999;
   font-style: normal;
@@ -1126,6 +1138,26 @@ code {
 .send-confirmation h2 { font-weight: 600; }
 .send-confirmation dl > div { border-color: #e9e1d7; }
 .send-confirmation dt { color: #776d63; }
+
+/* The preview dock header is a UI surface, so it follows the selected
+   palette while the email preview itself keeps its original colors. */
+.preview-dock-header {
+  border-bottom-color: var(--ui-border, #e3dacf);
+  background: var(--ui-surface, #fbf8f2);
+  color: var(--ui-text, #302b27);
+}
+.preview-dock-header h2 { color: var(--ui-text, #302b27); }
+.preview-recipient { color: var(--ui-muted, #776d63); }
+.preview-toggle-button {
+  border-color: var(--ui-border, #e3dacf);
+  background: var(--ui-surface, #fbf8f2);
+  color: var(--ui-text, #302b27);
+}
+.preview-toggle-button:hover {
+  border-color: var(--ui-accent, #a65037);
+  background: var(--ui-accent-soft, #f3eee6);
+  color: var(--ui-accent, #a65037);
+}
 .confirmation-warning { color: #93612d; }
 .send-page button:focus-visible { outline-color: rgba(166, 80, 55, .3); }
 
