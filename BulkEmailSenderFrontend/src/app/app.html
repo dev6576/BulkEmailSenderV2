@@ -27,6 +27,13 @@
             <span class="palette-swatch" [style.background]="option.color"></span>{{ option.label }}
           </button>
         }
+        <div class="custom-colors" aria-label="Custom interface colors">
+          <label>Primary accent<input type="color" [value]="customization().accent" (input)="updateColor('accent', $any($event.target).value)"></label>
+          <label>Logo mark<input type="color" [value]="customization().logoMark" (input)="updateColor('logoMark', $any($event.target).value)"></label>
+          <label>Logo text<input type="color" [value]="customization().logoText" (input)="updateColor('logoText', $any($event.target).value)"></label>
+          <label>Active tab text<input type="color" [value]="customization().activeTabText" (input)="updateColor('activeTabText', $any($event.target).value)"></label>
+          <label>Active tab highlight<input type="color" [value]="customization().activeTabHighlight" (input)="updateColor('activeTabHighlight', $any($event.target).value)"></label>
+        </div>
       </section>
     }
   </div>
