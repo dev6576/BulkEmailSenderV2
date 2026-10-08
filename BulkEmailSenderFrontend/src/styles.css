@@ -195,6 +195,40 @@ app-root[data-palette] .recipient-grid .ag-row-hover .ag-cell { background-color
 app-root[data-palette] .recipient-grid .ag-row-selected::before { background-color: var(--ui-accent-soft) !important; }
 app-root[data-palette] .recipient-grid .ag-header-cell-text,
 app-root[data-palette] .recipient-grid .ag-cell { color: var(--ui-text) !important; }
+app-root[data-palette] .recipient-grid {
+  --ag-foreground-color: var(--ui-text);
+  --ag-data-color: var(--ui-text);
+  --ag-secondary-foreground-color: var(--ui-muted);
+  --ag-header-foreground-color: var(--ui-text);
+  --ag-background-color: var(--ui-surface);
+  --ag-data-background-color: var(--ui-surface);
+  --ag-wrapper-background-color: var(--ui-surface);
+  --ag-header-background-color: var(--ui-surface-alt);
+  --ag-subheader-background-color: var(--ui-surface-alt);
+  --ag-control-panel-background-color: var(--ui-surface);
+  --ag-menu-background-color: var(--ui-surface);
+  --ag-panel-background-color: var(--ui-surface);
+  --ag-border-color: var(--ui-border);
+  --ag-row-hover-color: var(--ui-accent-soft);
+  --ag-selected-row-background-color: var(--ui-accent-soft);
+  --ag-range-selection-background-color: var(--ui-accent-soft);
+  --ag-range-selection-border-color: var(--ui-accent);
+  --ag-active-color: var(--ui-accent);
+  --ag-checkbox-checked-color: var(--ui-accent);
+  --ag-input-focus-border-color: var(--ui-accent);
+}
+app-root[data-palette] .recipient-grid .ag-header,
+app-root[data-palette] .recipient-grid .ag-header-row,
+app-root[data-palette] .recipient-grid .ag-header-cell,
+app-root[data-palette] .recipient-grid .ag-header-group-cell { background-color: var(--ui-surface-alt) !important; }
+app-root[data-palette] .recipient-grid .ag-icon,
+app-root[data-palette] .recipient-grid .ag-header-cell-menu-button,
+app-root[data-palette] .recipient-grid .ag-sort-indicator-container { color: var(--ui-muted) !important; }
+app-root[data-palette] .recipient-grid .ag-cell-focus:not(.ag-cell-range-selected),
+app-root[data-palette] .recipient-grid .ag-cell-range-single-cell,
+app-root[data-palette] .recipient-grid .ag-cell-range-selected:not(.ag-cell-range-single-cell) { border-color: var(--ui-accent) !important; }
+app-root[data-palette] .recipient-grid .ag-checkbox-input-wrapper.ag-checked,
+app-root[data-palette] .recipient-grid .ag-radio-button-input-wrapper.ag-checked { color: var(--ui-accent) !important; }
 app-root[data-palette] .auth-notice { color: var(--ui-text) !important; background: var(--ui-accent-soft) !important; border-color: var(--ui-border) !important; }
 app-root[data-palette] .palette-menu { color: var(--ui-text) !important; background: var(--ui-surface) !important; border-color: var(--ui-border) !important; }
 app-root[data-palette] .palette-option { color: var(--ui-text) !important; }
