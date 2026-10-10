@@ -51,6 +51,8 @@ public sealed class EmailRenderer
         {
             Subject = subject,
             HtmlBody = htmlBody,
+            Cc = recipient.Values.FirstOrDefault(pair =>
+                pair.Key.Equals("email_cc", StringComparison.OrdinalIgnoreCase)).Value?.Trim(),
             Attachments = email.Attachments
         };
 

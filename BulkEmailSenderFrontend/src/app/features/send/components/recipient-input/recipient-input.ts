@@ -432,14 +432,22 @@ export class RecipientInput {
     // first row avoids rescanning every recipient just to rediscover columns.
     const firstRow = this.gridRows[0];
     if (firstRow) {
-      return Object.keys(firstRow)
+      const columns = Object.keys(firstRow)
         .filter(key => key !== 'rowId' && !GRID_ONLY_FIELDS.has(key));
+      for (const required of ['email', 'email_cc']) {
+        if (!columns.some(column => column.toLowerCase() === required)) columns.push(required);
+      }
+      return columns;
     }
 
     // Preserve known columns after the final row is removed.
-    return this.columnDefs
+    const columns = this.columnDefs
       .map(column => column.field)
       .filter((field): field is string => typeof field === 'string' && field !== 'rowId');
+    for (const required of ['email', 'email_cc']) {
+      if (!columns.some(column => column.toLowerCase() === required)) columns.push(required);
+    }
+    return columns;
 
   }
 
@@ -987,7 +995,7 @@ export class RecipientInput {
             ).trim();
 
 
-          if (!value) {
+          if (!value && column.toLowerCase() !== 'email_cc') {
 
             errors.push(
               `${column} is required.`
@@ -1004,6 +1012,12 @@ export class RecipientInput {
           if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             errors.push('Email address is not valid.');
           }
+        }
+
+        const ccColumn = dataColumns.find(column => column.toLowerCase() === 'email_cc');
+        const cc = ccColumn ? String(row[ccColumn] ?? '').trim() : '';
+        if (cc && !cc.split(',').every(address => /^[^\s@,]+@[^\s@,]+\.[^\s@,]+$/.test(address.trim()))) {
+          errors.push('CC must contain valid email addresses separated by commas.');
         }
 
 

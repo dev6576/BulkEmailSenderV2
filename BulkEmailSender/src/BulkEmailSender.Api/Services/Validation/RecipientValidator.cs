@@ -32,6 +32,11 @@ public sealed class RecipientValidator
                 "Email");
         }
 
+        var cc = recipient.Values.FirstOrDefault(pair =>
+            pair.Key.Equals("email_cc", StringComparison.OrdinalIgnoreCase)).Value;
+        if (!string.IsNullOrWhiteSpace(cc) && !IsValidCcList(cc))
+            result.Add("InvalidCcEmail", "CC must contain valid email addresses separated by commas.", "email_cc");
+
         return result;
     }
 
@@ -50,5 +55,12 @@ public sealed class RecipientValidator
         {
             return false;
         }
+    }
+
+    private static bool IsValidCcList(string value)
+    {
+        var addresses = value.Split(',', StringSplitOptions.TrimEntries);
+        return addresses.Length > 0 && addresses.All(address =>
+            !string.IsNullOrWhiteSpace(address) && IsValidEmail(address));
     }
 }

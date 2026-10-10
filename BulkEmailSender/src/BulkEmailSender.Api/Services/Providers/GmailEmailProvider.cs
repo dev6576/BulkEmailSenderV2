@@ -74,7 +74,10 @@ public sealed class GmailEmailProvider(
     {
         var boundary = "=_BulkEmail_" + Guid.NewGuid().ToString("N");
         var sb = new StringBuilder();
-        sb.Append("To: ").Append(SafeHeader(recipient)).Append("\r\nSubject: ").Append(EncodeHeader(email.Subject)).Append("\r\nMIME-Version: 1.0\r\n");
+        sb.Append("To: ").Append(SafeHeader(recipient)).Append("\r\n");
+        if (!string.IsNullOrWhiteSpace(email.Cc))
+            sb.Append("Cc: ").Append(SafeHeader(email.Cc)).Append("\r\n");
+        sb.Append("Subject: ").Append(EncodeHeader(email.Subject)).Append("\r\nMIME-Version: 1.0\r\n");
         if (email.Attachments.Count == 0)
         {
             sb.Append("Content-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n").Append(EncodeMimeBase64(Encoding.UTF8.GetBytes(email.HtmlBody)));
