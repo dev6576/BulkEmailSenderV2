@@ -41,7 +41,11 @@ public sealed class GmailEmailProvider(
             }
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
             var googleError = ReadGoogleError(body);
-            logger.LogWarning("Gmail send API returned HTTP {StatusCode}, reason {Reason}.", (int)response.StatusCode, googleError.Reason ?? "unknown");
+            logger.LogWarning(
+                "Gmail send API returned HTTP {StatusCode}. Google error reason: {Reason}. Google error message: {Message}.",
+                (int)response.StatusCode,
+                googleError.Reason ?? "unknown",
+                googleError.Message ?? "not provided");
             if (response.StatusCode == HttpStatusCode.TooManyRequests || response.StatusCode == HttpStatusCode.ServiceUnavailable)
             {
                 if (IsMailSendingLimit(googleError))
