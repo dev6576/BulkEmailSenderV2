@@ -117,6 +117,24 @@
           </p>
         </div>
 
+        <section class="saved-template-controls" aria-label="Saved templates">
+          <label for="saved-template-select">Saved templates</label>
+          <select id="saved-template-select" [value]="selectedTemplateId()" (change)="loadSavedTemplate($any($event.target).value)">
+            <option value="">Choose a saved template…</option>
+            @for (template of savedTemplates(); track template.id) {
+              <option [value]="template.id">{{ template.name }}</option>
+            }
+          </select>
+          <button type="button" class="remove-attachment" [disabled]="!selectedTemplateId()" (click)="deleteSavedTemplate()">Delete</button>
+          <span class="saved-template-divider" aria-hidden="true"></span>
+          <label class="visually-hidden" for="new-template-name">New template name</label>
+          <input id="new-template-name" type="text" placeholder="Name this template" [value]="templateName" (input)="templateName = $any($event.target).value" (keydown.enter)="$event.preventDefault(); saveCurrentTemplate()" />
+          <button type="button" class="attach-button" (click)="saveCurrentTemplate()">Save template</button>
+          @if (templateStoreMessage()) {
+            <p class="template-store-message" role="status">{{ templateStoreMessage() }}</p>
+          }
+        </section>
+
         <form [formGroup]="emailForm">
 
           <div class="subject-field">

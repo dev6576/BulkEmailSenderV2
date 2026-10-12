@@ -1169,8 +1169,41 @@ code {
 .confirmation-warning { color: #93612d; }
 .send-page button:focus-visible { outline-color: rgba(166, 80, 55, .3); }
 
+.saved-template-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin: 0 0 20px;
+  padding: 12px;
+  border: 1px solid var(--ui-border, #e3dacf);
+  border-radius: 8px;
+  background: var(--ui-surface-alt, #f3eee6);
+}
+.saved-template-controls label { color: var(--ui-text, #302b27); font-size: 13px; font-weight: 600; }
+.saved-template-controls select,
+.saved-template-controls input {
+  min-height: 36px;
+  box-sizing: border-box;
+  padding: 7px 9px;
+  border: 1px solid var(--ui-border, #d8cec2);
+  border-radius: 6px;
+  background: var(--ui-surface, #fffdfa);
+  color: var(--ui-text, #302b27);
+  font: inherit;
+  font-size: 13px;
+}
+.saved-template-controls select { min-width: 180px; }
+.saved-template-controls input { width: 190px; }
+.saved-template-controls button:disabled { cursor: not-allowed; opacity: .55; }
+.saved-template-divider { width: 1px; height: 24px; margin: 0 3px; background: var(--ui-border, #e3dacf); }
+.template-store-message { flex-basis: 100%; margin: 0; color: var(--ui-muted, #776d63); font-size: 12px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; clip-path: inset(50%); }
+
 @media (max-width: 700px) {
   .send-header, .send-workspace, .send-tabs, .preview-dock-header, .preview-dock-content { padding-left: 16px; padding-right: 16px; }
   .send-header { padding-top: 21px; }
   .email-editor { padding: 18px; }
+  .saved-template-controls select, .saved-template-controls input { flex: 1 1 150px; width: auto; }
+  .saved-template-divider { display: none; }
 }

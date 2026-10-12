@@ -43,6 +43,7 @@ import {
   Recipient,
   SendEvent
 } from '../../models/send.models';
+import { LocalTemplateStore, SavedEmailTemplate } from '../../services/local-template-store';
 
 
 Quill.register(
@@ -82,12 +83,17 @@ export class Send implements OnInit {
   readonly maxTotalAttachmentSize = 25 * 1024 * 1024;
   attachmentItems = signal<Array<{ fileName: string; size: number }>>([]);
   attachmentError = signal<string | null>(null);
+  savedTemplates = signal<SavedEmailTemplate[]>([]);
+  selectedTemplateId = signal('');
+  templateName = '';
+  templateStoreMessage = signal<string | null>(null);
   sourceMode = signal<'visual' | 'html'>('visual');
   sourceHtml = '';
   showSendConfirmation = signal(false);
 
   private readonly sendApi =
     inject(SendApiService);
+  private readonly templateStore = inject(LocalTemplateStore);
   readonly auth = inject(AuthService);
 
   private readonly ngZone =
@@ -110,6 +116,7 @@ export class Send implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   ngOnInit(): void {
+    void this.refreshSavedTemplates();
     this.emailForm.controls.body.valueChanges
       .pipe(
         debounceTime(300),
@@ -131,6 +138,81 @@ export class Send implements OnInit {
         this.previewError.set(null);
         this.preview();
       });
+  }
+
+  private async refreshSavedTemplates(): Promise<void> {
+    try {
+      this.savedTemplates.set(await this.templateStore.list());
+    } catch {
+      this.templateStoreMessage.set('Local template storage is unavailable in this browser.');
+    }
+  }
+
+  async saveCurrentTemplate(): Promise<void> {
+    this.syncBodyFromVisualEditor();
+    const name = this.templateName.trim();
+    if (!name) {
+      this.templateStoreMessage.set('Enter a name for this template.');
+      return;
+    }
+    const existing = this.savedTemplates().find(item => item.name.toLocaleLowerCase() === name.toLocaleLowerCase());
+    const id = existing?.id ?? (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`);
+    const template: SavedEmailTemplate = {
+      id,
+      name,
+      subject: this.emailForm.controls.subject.value,
+      body: this.emailForm.controls.body.value,
+      attachments: this.attachmentItems().map((item, index) => ({
+        ...item,
+        contentBase64: this.attachmentsArray.at(index).value
+      })),
+      updatedAt: Date.now()
+    };
+    try {
+      await this.templateStore.save(template);
+      this.selectedTemplateId.set(id);
+      this.templateName = '';
+      this.templateStoreMessage.set(existing ? `Updated “${name}” on this device.` : `Saved “${name}” on this device.`);
+      await this.refreshSavedTemplates();
+    } catch {
+      this.templateStoreMessage.set('Could not save this template. Check available browser storage.');
+    }
+  }
+
+  async loadSavedTemplate(id: string): Promise<void> {
+    this.selectedTemplateId.set(id);
+    this.templateStoreMessage.set(null);
+    if (!id) return;
+    const template = this.savedTemplates().find(item => item.id === id);
+    if (!template) return;
+    if (template.attachments.length > 10 || template.attachments.some(item => item.size > this.maxAttachmentFileSize) ||
+        template.attachments.reduce((total, item) => total + item.size, 0) > this.maxTotalAttachmentSize) {
+      this.templateStoreMessage.set('This template’s attachments exceed the current size limits.');
+      return;
+    }
+    this.emailForm.controls.subject.setValue(template.subject);
+    this.emailForm.controls.body.setValue(template.body);
+    this.sourceHtml = template.body;
+    this.attachmentsArray.clear();
+    for (const attachment of template.attachments) {
+      this.attachmentsArray.push(new FormControl(attachment.contentBase64, { nonNullable: true }));
+    }
+    this.attachmentItems.set(template.attachments.map(({ fileName, size }) => ({ fileName, size })));
+    this.attachmentError.set(null);
+    this.templateStoreMessage.set(`Loaded “${template.name}”.`);
+  }
+
+  async deleteSavedTemplate(): Promise<void> {
+    const id = this.selectedTemplateId();
+    if (!id) return;
+    try {
+      await this.templateStore.delete(id);
+      this.selectedTemplateId.set('');
+      this.templateStoreMessage.set('Template removed from this device.');
+      await this.refreshSavedTemplates();
+    } catch {
+      this.templateStoreMessage.set('Could not remove this template from local storage.');
+    }
   }
 
 
