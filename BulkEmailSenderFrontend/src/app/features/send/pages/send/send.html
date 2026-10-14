@@ -297,6 +297,14 @@
       @if (historyGroups.length === 0) {
         <p class="history-empty">No send history yet.</p>
       } @else {
+        <div class="history-pagination" aria-label="History pagination">
+          <span>Showing {{ historyRangeStart }}–{{ historyRangeEnd }} of {{ historyEntries().length }}</span>
+          <div>
+            <button type="button" [disabled]="historyPage() === 0" (click)="changeHistoryPage(historyPage() - 1)">Previous</button>
+            <span>Page {{ historyPage() + 1 }} of {{ historyPageCount }}</span>
+            <button type="button" [disabled]="historyPage() + 1 >= historyPageCount" (click)="changeHistoryPage(historyPage() + 1)">Next</button>
+          </div>
+        </div>
         @for (group of historyGroups; track group.date) {
           <section class="history-date-group">
             <h3>{{ group.date }}</h3>
@@ -310,6 +318,16 @@
               [getRowId]="historyGetRowId">
             </ag-grid-angular>
           </section>
+        }
+        @if (historyPageCount > 1) {
+          <div class="history-pagination history-pagination-bottom" aria-label="History pagination">
+            <span>Showing {{ historyRangeStart }}–{{ historyRangeEnd }} of {{ historyEntries().length }}</span>
+            <div>
+              <button type="button" [disabled]="historyPage() === 0" (click)="changeHistoryPage(historyPage() - 1)">Previous</button>
+              <span>Page {{ historyPage() + 1 }} of {{ historyPageCount }}</span>
+              <button type="button" [disabled]="historyPage() + 1 >= historyPageCount" (click)="changeHistoryPage(historyPage() + 1)">Next</button>
+            </div>
+          </div>
         }
       }
     </section>

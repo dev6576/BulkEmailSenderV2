@@ -171,6 +171,8 @@ export class Send implements OnInit {
   }
 
   historyEntries = signal<SendHistoryEntry[]>([]);
+  historyPage = signal(0);
+  readonly historyPageSize = 50;
   historyMessage = signal<string | null>(null);
   readonly historyTheme = themeQuartz;
   readonly historyGetRowId: GetRowIdFunc<SendHistoryGridRow> = params => params.data.historyId;
@@ -196,13 +198,31 @@ export class Send implements OnInit {
 
   get historyGroups(): SendHistoryDateGroup[] {
     const groups = new Map<string, SendHistoryEntry[]>();
-    for (const entry of this.historyEntries()) {
+    const start = this.historyPage() * this.historyPageSize;
+    const pageEntries = this.historyEntries().slice(start, start + this.historyPageSize);
+    for (const entry of pageEntries) {
       const date = new Date(entry.sentAt).toLocaleDateString();
       const group = groups.get(date) ?? [];
       group.push(entry);
       groups.set(date, group);
     }
     return [...groups].map(([date, entries]) => ({ date, entries }));
+  }
+
+  get historyPageCount(): number {
+    return Math.ceil(this.historyEntries().length / this.historyPageSize);
+  }
+
+  get historyRangeStart(): number {
+    return this.historyEntries().length ? this.historyPage() * this.historyPageSize + 1 : 0;
+  }
+
+  get historyRangeEnd(): number {
+    return Math.min((this.historyPage() + 1) * this.historyPageSize, this.historyEntries().length);
+  }
+
+  changeHistoryPage(page: number): void {
+    this.historyPage.set(Math.max(0, Math.min(page, Math.max(0, this.historyPageCount - 1))));
   }
 
   historyGridRows(entries: SendHistoryEntry[]): SendHistoryGridRow[] {
@@ -231,6 +251,7 @@ export class Send implements OnInit {
   private async refreshHistory(): Promise<void> {
     try {
       this.historyEntries.set(await this.historyStore.list());
+      this.changeHistoryPage(this.historyPage());
       this.historyMessage.set(null);
     } catch {
       this.historyMessage.set('Browser history storage is unavailable.');
@@ -284,6 +305,7 @@ export class Send implements OnInit {
     try {
       await this.historyStore.clear();
       this.historyEntries.set([]);
+      this.historyPage.set(0);
       this.historyMessage.set('Send history cleared from this browser.');
     } catch {
       this.historyMessage.set('Could not clear send history from this browser.');
@@ -1332,6 +1354,7 @@ export class Send implements OnInit {
     this.sendRowEvents.set(initialSendEvents);
     const sendStartedAt = new Date().toISOString();
     const usedTemplate = this.getUsedSavedTemplate();
+    this.historyPage.set(0);
 
     this.sendApi.send(request).subscribe({
       next: response => {
