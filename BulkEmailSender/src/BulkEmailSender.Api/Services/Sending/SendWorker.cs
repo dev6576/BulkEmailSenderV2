@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -65,9 +66,10 @@ public sealed class SendWorker(
         Guid operationId,
         CancellationToken cancellationToken)
     {
+        var operationTimer = Stopwatch.StartNew();
         logger.LogInformation(
-            "Processing send operation {OperationId}.",
-            operationId);
+            "Processing send operation {OperationId}. Working set {WorkingSetMb} MB; managed heap {ManagedHeapMb} MB.",
+            operationId, Environment.WorkingSet / 1048576d, GC.GetTotalMemory(false) / 1048576d);
 
         using var scope =
             scopeFactory.CreateScope();
@@ -131,10 +133,11 @@ public sealed class SendWorker(
                 .ToList();
 
         logger.LogInformation(
-            "Send operation {OperationId} has {PendingRows} pending rows.",
-            operationId,
-            pendingWorkItems.Count);
+            "Send operation {OperationId} loaded {TotalRows} rows, with {PendingRows} pending. Working set {WorkingSetMb} MB; managed heap {ManagedHeapMb} MB.",
+            operationId, operation.WorkItems.Count, pendingWorkItems.Count,
+            Environment.WorkingSet / 1048576d, GC.GetTotalMemory(false) / 1048576d);
 
+        var processedRows = 0;
         foreach (var workItem in pendingWorkItems)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -176,7 +179,7 @@ public sealed class SendWorker(
             }
             catch (Exception exception)
             {
-                logger.LogError("Unexpected row processing failure for operation {OperationId}, row {RowId}; exception type {ExceptionType}.", operationId, recipient.RowId, exception.GetType().Name);
+                logger.LogError(exception, "Unexpected row processing failure for operation {OperationId}, row {RowId}.", operationId, recipient.RowId);
                 result =
                     SendRowResult.Failed(
                         recipient.RowId,
@@ -205,6 +208,15 @@ public sealed class SendWorker(
                     cancellationToken);
             }
 
+            processedRows++;
+            if (processedRows % 10 == 0 || processedRows == pendingWorkItems.Count)
+            {
+                logger.LogInformation(
+                    "Send operation {OperationId} progress {ProcessedRows}/{PendingRows}. Working set {WorkingSetMb} MB; managed heap {ManagedHeapMb} MB.",
+                    operationId, processedRows, pendingWorkItems.Count,
+                    Environment.WorkingSet / 1048576d, GC.GetTotalMemory(false) / 1048576d);
+            }
+
             broadcaster.Publish(
                 new SendEvent
                 {
@@ -227,7 +239,7 @@ public sealed class SendWorker(
 
         if (completedOperation is not null)
         {
-            logger.LogInformation("Send operation {OperationId} completed with {SentRows} sent and {FailedRows} failed.", completedOperation.Id, completedOperation.SentRows, completedOperation.FailedRows);
+            logger.LogInformation("Send operation {OperationId} completed with {SentRows} sent and {FailedRows} failed after {ElapsedSeconds} seconds.", completedOperation.Id, completedOperation.SentRows, completedOperation.FailedRows, operationTimer.Elapsed.TotalSeconds);
             broadcaster.Publish(
                 new SendEvent
                 {
@@ -240,9 +252,8 @@ public sealed class SendWorker(
                 });
         }
 
-        logger.LogInformation(
-            "Send operation {OperationId} finished.",
-            operationId);
+        logger.LogInformation("Send operation {OperationId} finished in {ElapsedSeconds} seconds. Working set {WorkingSetMb} MB; managed heap {ManagedHeapMb} MB.",
+            operationId, operationTimer.Elapsed.TotalSeconds, Environment.WorkingSet / 1048576d, GC.GetTotalMemory(false) / 1048576d);
     }
 
     private async Task FailPendingRowsAsync(

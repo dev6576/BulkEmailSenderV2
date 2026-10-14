@@ -66,6 +66,16 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(databaseConnectionString));
 
 var app = builder.Build();
+var applicationLifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
+var lifecycleLogger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("ApplicationLifecycle");
+applicationLifetime.ApplicationStarted.Register(() =>
+    lifecycleLogger.LogInformation("Application started. Environment {EnvironmentName}; process ID {ProcessId}.",
+        app.Environment.EnvironmentName, Environment.ProcessId));
+applicationLifetime.ApplicationStopping.Register(() =>
+    lifecycleLogger.LogWarning("Application shutdown requested. Working set {WorkingSetMb} MB; managed heap {ManagedHeapMb} MB.",
+        Environment.WorkingSet / 1048576d, GC.GetTotalMemory(false) / 1048576d));
+applicationLifetime.ApplicationStopped.Register(() =>
+    lifecycleLogger.LogInformation("Application shutdown completed."));
 if (app.Environment.IsProduction() && !HasApplicationPassword(app.Configuration))
     throw new InvalidOperationException("AppAuth:Password or AppAuth:PasswordHash must be configured in Production.");
 if (app.Environment.IsProduction())

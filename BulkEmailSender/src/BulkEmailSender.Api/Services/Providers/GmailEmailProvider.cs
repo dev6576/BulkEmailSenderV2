@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using BulkEmailSender.Api.Domain.Email;
 using BulkEmailSender.Api.Services.Auth;
 
@@ -29,6 +30,11 @@ public sealed class GmailEmailProvider(
         {
             var wait = TimeSpan.FromMilliseconds(1000) - (DateTimeOffset.UtcNow - gate.LastSentAt);
             if (wait > TimeSpan.Zero) await Task.Delay(wait, cancellationToken);
+            var attachmentBytes = email.Attachments.Sum(attachment => (long)attachment.Content.Length);
+            var sendTimer = Stopwatch.StartNew();
+            logger.LogInformation(
+                "Starting Gmail API send. Attachment count {AttachmentCount}; attachment bytes {AttachmentBytes}; HTML body bytes {HtmlBodyBytes}.",
+                email.Attachments.Count, attachmentBytes, Encoding.UTF8.GetByteCount(email.HtmlBody));
             using var request = new HttpRequestMessage(HttpMethod.Post, "https://gmail.googleapis.com/gmail/v1/users/me/messages/send");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.AccessToken);
             request.Content = JsonContent.Create(new { raw = Base64Url(Encoding.UTF8.GetBytes(BuildMime(recipientEmail, email))) });
@@ -37,10 +43,15 @@ public sealed class GmailEmailProvider(
             if (response.IsSuccessStatusCode)
             {
                 using var result = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
-                return EmailSendResult.Success(result.RootElement.TryGetProperty("id", out var id) ? id.GetString() : null);
+                var messageId = result.RootElement.TryGetProperty("id", out var id) ? id.GetString() : null;
+                logger.LogInformation("Gmail API send succeeded with HTTP {StatusCode} in {ElapsedMs} ms. Attachment bytes {AttachmentBytes}.",
+                    (int)response.StatusCode, sendTimer.Elapsed.TotalMilliseconds, attachmentBytes);
+                return EmailSendResult.Success(messageId);
             }
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
             var googleError = ReadGoogleError(body);
+            logger.LogWarning("Gmail API send failed with HTTP {StatusCode} after {ElapsedMs} ms. Attachment bytes {AttachmentBytes}; Google reason {Reason}.",
+                (int)response.StatusCode, sendTimer.Elapsed.TotalMilliseconds, attachmentBytes, googleError.Reason ?? "unknown");
             logger.LogWarning(
                 "Gmail send API returned HTTP {StatusCode}. Google error reason: {Reason}. Google error message: {Message}.",
                 (int)response.StatusCode,
