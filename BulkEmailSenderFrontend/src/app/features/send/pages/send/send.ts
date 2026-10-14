@@ -7,6 +7,7 @@ import {
   inject,
   signal
 } from '@angular/core';
+import { CommonModule } from '@angular/common';
 
 import {
   FormArray,
@@ -29,6 +30,7 @@ import Quill from 'quill';
 import QuillTableBetter from 'quill-table-better';
 
 import QuillResize from 'quill-resize-module';
+import * as XLSX from 'xlsx';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -44,6 +46,7 @@ import {
   SendEvent
 } from '../../models/send.models';
 import { LocalTemplateStore, SavedEmailTemplate } from '../../services/local-template-store';
+import { SendHistoryEntry, SendHistoryStore } from '../../services/send-history-store';
 
 
 Quill.register(
@@ -61,13 +64,20 @@ Quill.register(
 
 type SendTab =
   'data'
-  | 'template';
+  | 'template'
+  | 'history';
+
+interface SendHistoryDateGroup {
+  date: string;
+  entries: SendHistoryEntry[];
+}
 
 
 @Component({
   selector: 'app-send',
 
   imports: [
+    CommonModule,
     ReactiveFormsModule,
     RecipientInput,
     QuillEditorComponent
@@ -94,6 +104,7 @@ export class Send implements OnInit {
   private readonly sendApi =
     inject(SendApiService);
   private readonly templateStore = inject(LocalTemplateStore);
+  private readonly historyStore = inject(SendHistoryStore);
   readonly auth = inject(AuthService);
 
   private readonly ngZone =
@@ -117,6 +128,7 @@ export class Send implements OnInit {
 
   ngOnInit(): void {
     void this.refreshSavedTemplates();
+    void this.refreshHistory();
     this.emailForm.controls.body.valueChanges
       .pipe(
         debounceTime(300),
@@ -138,6 +150,99 @@ export class Send implements OnInit {
         this.previewError.set(null);
         this.preview();
       });
+  }
+
+  historyEntries = signal<SendHistoryEntry[]>([]);
+  historyMessage = signal<string | null>(null);
+
+  get historyGroups(): SendHistoryDateGroup[] {
+    const groups = new Map<string, SendHistoryEntry[]>();
+    for (const entry of this.historyEntries()) {
+      const date = new Date(entry.sentAt).toLocaleDateString();
+      const group = groups.get(date) ?? [];
+      group.push(entry);
+      groups.set(date, group);
+    }
+    return [...groups].map(([date, entries]) => ({ date, entries }));
+  }
+
+  private async refreshHistory(): Promise<void> {
+    try {
+      this.historyEntries.set(await this.historyStore.list());
+      this.historyMessage.set(null);
+    } catch {
+      this.historyMessage.set('Browser history storage is unavailable.');
+    }
+  }
+
+  private async saveHistoryEntries(entries: SendHistoryEntry[]): Promise<void> {
+    const updated = new Map(this.historyEntries().map(entry => [entry.id, entry]));
+    entries.forEach(entry => updated.set(entry.id, entry));
+    this.historyEntries.set([...updated.values()].sort((a, b) => b.sentAt.localeCompare(a.sentAt)));
+    try {
+      await this.historyStore.save(entries);
+    } catch {
+      this.historyMessage.set('Could not save send history in this browser. Export or check available browser storage.');
+    }
+  }
+
+  exportHistory(format: 'csv' | 'xlsx' = 'csv'): void {
+    const entries = this.historyEntries();
+    if (!entries.length) return;
+    const columnNames = [...new Set(entries.flatMap(entry => Object.keys(entry.values)))];
+    const columns = ['Timestamp', 'Status', 'Saved template', 'Template version saved at', 'Template ID', ...columnNames, 'Errors'];
+    const escape = (value: unknown): string => `"${String(value ?? '').replaceAll('"', '""')}"`;
+    const rows = entries.map(entry => [
+      entry.sentAt,
+      entry.status,
+      entry.template?.name ?? '',
+      entry.template ? new Date(entry.template.updatedAt).toISOString() : '',
+      entry.template?.id ?? '',
+      ...columnNames.map(name => entry.values[name] ?? ''),
+      entry.errors.join('; ')
+    ]);
+    if (format === 'xlsx') {
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.aoa_to_sheet([columns, ...rows]);
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Send History');
+      XLSX.writeFile(workbook, `send-history-${new Date().toISOString().slice(0, 10)}.xlsx`);
+      return;
+    }
+    const csv = [columns, ...rows].map(row => row.map(escape).join(',')).join('\r\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `send-history-${new Date().toISOString().slice(0, 10)}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  historyEmail(entry: SendHistoryEntry): string {
+    const match = Object.entries(entry.values).find(([name]) => ['email', 'emailaddress', 'recipientemail'].includes(name.toLocaleLowerCase().replaceAll(/[^a-z]/g, '')));
+    return match?.[1] ?? 'Recipient';
+  }
+
+  historyCc(entry: SendHistoryEntry): string {
+    const match = Object.entries(entry.values).find(([name]) => ['cc', 'emailcc'].includes(name.toLocaleLowerCase().replaceAll(/[^a-z]/g, '')));
+    return match?.[1] ?? '';
+  }
+
+  isHistoryMetaField(name: string): boolean {
+    return ['email', 'emailaddress', 'recipientemail', 'cc', 'emailcc'].includes(name.toLocaleLowerCase().replaceAll(/[^a-z]/g, ''));
+  }
+
+  private getUsedSavedTemplate(): SavedEmailTemplate | undefined {
+    const id = this.selectedTemplateId();
+    if (!id) return undefined;
+    const template = this.savedTemplates().find(item => item.id === id);
+    if (!template || template.subject !== this.emailForm.controls.subject.value || template.body !== this.emailForm.controls.body.value) return undefined;
+    const currentAttachments = this.attachmentItems().map((item, index) => ({
+      fileName: item.fileName,
+      contentBase64: this.attachmentsArray.at(index).value
+    }));
+    if (template.attachments.length !== currentAttachments.length || template.attachments.some((item, index) =>
+      item.fileName !== currentAttachments[index]?.fileName || item.contentBase64 !== currentAttachments[index]?.contentBase64)) return undefined;
+    return template;
   }
 
   private async refreshSavedTemplates(): Promise<void> {
@@ -1152,12 +1257,23 @@ export class Send implements OnInit {
     this.sendSentRows.set(0);
     this.sendFailedRows.set(0);
     this.sendRowEvents.set(initialSendEvents);
+    const sendStartedAt = new Date().toISOString();
+    const usedTemplate = this.getUsedSavedTemplate();
 
     this.sendApi.send(request).subscribe({
       next: response => {
         this.sendOperationId.set(response.operationId);
         this.sendStatus.set(response.status);
         this.sendTotalRows.set(response.totalRows);
+        void this.saveHistoryEntries(this.selectedRecipients.map(recipient => ({
+          id: `${response.operationId}:${recipient.rowId}`,
+          operationId: response.operationId,
+          sentAt: sendStartedAt,
+          status: 'Sending',
+          values: { ...recipient.values },
+          errors: [],
+          ...(usedTemplate ? { template: { id: usedTemplate.id, name: usedTemplate.name, updatedAt: usedTemplate.updatedAt } } : {})
+        })));
         this.listenToSendEvents(response.operationId);
       },
       error: error => {
@@ -1383,6 +1499,16 @@ export class Send implements OnInit {
     );
 
     this.recipientInput?.refreshSendStatusCells(updated);
+
+    const currentHistory = this.historyEntries();
+    const historyEntry = currentHistory.find(item => item.id === `${event.operationId}:${event.rowId}`);
+    if (historyEntry) {
+      void this.saveHistoryEntries([{
+        ...historyEntry,
+        status: event.status,
+        errors: [...event.errors]
+      }]);
+    }
 
   }
 

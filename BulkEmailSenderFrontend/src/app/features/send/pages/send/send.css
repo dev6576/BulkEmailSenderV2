@@ -95,6 +95,31 @@
   overflow-y: auto;
 }
 
+.history-panel { overflow: auto; }
+.history-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.history-heading h2 { margin: 0; font-size: 20px; }
+.history-heading p, .history-empty, .history-message { margin: 6px 0 0; color: #667085; font-size: 13px; }
+.history-export-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.history-export { padding: 8px 13px; border: 1px solid #c9c1b8; border-radius: 6px; background: #fff; color: #302b27; cursor: pointer; font: inherit; }
+.history-export:disabled { cursor: not-allowed; opacity: .5; }
+.history-date-group { margin: 0 0 22px; }
+.history-date-group h3 { position: sticky; top: 0; z-index: 1; margin: 0; padding: 8px 0; border-bottom: 1px solid #e5ded6; background: var(--ui-surface, #fffdfa); font-size: 14px; }
+.history-list { display: grid; gap: 10px; padding-top: 10px; }
+.history-entry { padding: 12px 14px; border: 1px solid var(--ui-border, #e3dacf); border-radius: 8px; background: var(--ui-surface, #fffdfa); }
+.history-entry-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.history-entry-header strong { overflow-wrap: anywhere; }
+.history-entry time { display: block; margin-top: 3px; color: #667085; font-size: 12px; }
+.history-status { padding: 3px 8px; border-radius: 999px; background: #f2f4f7; color: #475467; font-size: 12px; }
+.history-status.status-sent { background: #e8f5ec; color: #247344; }
+.history-status.status-failed { background: #fef0f0; color: #b42318; }
+.history-entry p { margin: 8px 0 0; font-size: 13px; overflow-wrap: anywhere; }
+.history-entry .history-template span { display: block; margin-top: 2px; color: #667085; font-size: 12px; }
+.history-entry dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px 14px; margin: 10px 0 0; }
+.history-entry dl div { min-width: 0; }
+.history-entry dt { color: #667085; font-size: 11px; }
+.history-entry dd { margin: 2px 0 0; font-size: 13px; overflow-wrap: anywhere; }
+.history-entry .history-error { color: #b42318; }
+
 
 /* =========================================================
    SEND ACTION BAR

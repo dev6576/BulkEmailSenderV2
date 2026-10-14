@@ -25,6 +25,14 @@
       (click)="selectTab('template')">
       Email Template
     </button>
+
+    <button
+      type="button"
+      class="send-tab"
+      [class.active]="activeTab() === 'history'"
+      (click)="selectTab('history')">
+      History
+    </button>
   </nav>
 
   <main class="send-workspace">
@@ -260,6 +268,67 @@
           </div>
         </form>
       </div>
+    </section>
+
+    <section
+      class="tab-panel history-panel"
+      [class.tab-panel-hidden]="activeTab() !== 'history'">
+      <div class="history-heading">
+        <div>
+          <h2>Send History</h2>
+          <p>Stored in this browser. Each row includes all recipient columns and the final send status.</p>
+        </div>
+        <div class="history-export-actions">
+        <button type="button" class="history-export" [disabled]="historyEntries().length === 0" (click)="exportHistory('csv')">
+          Export CSV
+        </button>
+        <button type="button" class="history-export" [disabled]="historyEntries().length === 0" (click)="exportHistory('xlsx')">
+          Export XLSX
+        </button>
+        </div>
+      </div>
+
+      @if (historyMessage()) {
+        <p class="history-message" role="status">{{ historyMessage() }}</p>
+      }
+      @if (historyGroups.length === 0) {
+        <p class="history-empty">No send history yet.</p>
+      } @else {
+        @for (group of historyGroups; track group.date) {
+          <section class="history-date-group">
+            <h3>{{ group.date }}</h3>
+            <div class="history-list">
+              @for (entry of group.entries; track entry.id) {
+                <article class="history-entry">
+                  <div class="history-entry-header">
+                    <strong>{{ historyEmail(entry) }}</strong>
+                    <span class="history-status" [class.status-sent]="entry.status === 'Sent'" [class.status-failed]="entry.status === 'Failed'">{{ entry.status }}</span>
+                  </div>
+                  <time [attr.datetime]="entry.sentAt">{{ entry.sentAt | date:'shortTime' }}</time>
+                  @if (entry.template) {
+                    <p class="history-template"><b>Saved template:</b> {{ entry.template.name }}
+                      <span>Version saved {{ entry.template.updatedAt | date:'medium' }}</span>
+                    </p>
+                  }
+                  @if (historyCc(entry)) {
+                    <p><b>CC:</b> {{ historyCc(entry) }}</p>
+                  }
+                  <dl>
+                    @for (field of entry.values | keyvalue; track field.key) {
+                      @if (!isHistoryMetaField(field.key)) {
+                        <div><dt>{{ field.key }}</dt><dd>{{ field.value }}</dd></div>
+                      }
+                    }
+                  </dl>
+                  @if (entry.errors.length) {
+                    <p class="history-error">{{ entry.errors.join('; ') }}</p>
+                  }
+                </article>
+              }
+            </div>
+          </section>
+        }
+      }
     </section>
   </main>
 
