@@ -41,6 +41,17 @@ export class SendHistoryStore {
     });
   }
 
+  async clear(): Promise<void> {
+    const db = await this.open();
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(this.storeName, 'readwrite');
+      transaction.objectStore(this.storeName).clear();
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+  }
+
   private open(): Promise<IDBDatabase> {
     if (!globalThis.indexedDB) return Promise.reject(new Error('This browser does not support IndexedDB.'));
     this.database ??= new Promise((resolve, reject) => {

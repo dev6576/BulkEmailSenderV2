@@ -285,6 +285,9 @@
         <button type="button" class="history-export" [disabled]="historyEntries().length === 0" (click)="exportHistory('xlsx')">
           Export XLSX
         </button>
+        <button type="button" class="history-clear" [disabled]="historyEntries().length === 0 || isSending()" (click)="clearHistory()">
+          Clear history
+        </button>
         </div>
       </div>
 
@@ -297,35 +300,15 @@
         @for (group of historyGroups; track group.date) {
           <section class="history-date-group">
             <h3>{{ group.date }}</h3>
-            <div class="history-list">
-              @for (entry of group.entries; track entry.id) {
-                <article class="history-entry">
-                  <div class="history-entry-header">
-                    <strong>{{ historyEmail(entry) }}</strong>
-                    <span class="history-status" [class.status-sent]="entry.status === 'Sent'" [class.status-failed]="entry.status === 'Failed'">{{ entry.status }}</span>
-                  </div>
-                  <time [attr.datetime]="entry.sentAt">{{ entry.sentAt | date:'shortTime' }}</time>
-                  @if (entry.template) {
-                    <p class="history-template"><b>Saved template:</b> {{ entry.template.name }}
-                      <span>Version saved {{ entry.template.updatedAt | date:'medium' }}</span>
-                    </p>
-                  }
-                  @if (historyCc(entry)) {
-                    <p><b>CC:</b> {{ historyCc(entry) }}</p>
-                  }
-                  <dl>
-                    @for (field of entry.values | keyvalue; track field.key) {
-                      @if (!isHistoryMetaField(field.key)) {
-                        <div><dt>{{ field.key }}</dt><dd>{{ field.value }}</dd></div>
-                      }
-                    }
-                  </dl>
-                  @if (entry.errors.length) {
-                    <p class="history-error">{{ entry.errors.join('; ') }}</p>
-                  }
-                </article>
-              }
-            </div>
+            <ag-grid-angular
+              class="history-grid"
+              [theme]="historyTheme"
+              [rowData]="historyGridRows(group.entries)"
+              [columnDefs]="historyGridColumns()"
+              [defaultColDef]="historyDefaultColDef"
+              [style.height.px]="historyGridHeight(group.entries)"
+              [getRowId]="historyGetRowId">
+            </ag-grid-angular>
           </section>
         }
       }

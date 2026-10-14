@@ -1,5 +1,6 @@
 import {
   Component,
+  computed,
   DestroyRef,
   NgZone,
   OnInit,
@@ -8,6 +9,8 @@ import {
   signal
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { AgGridAngular } from 'ag-grid-angular';
+import { ClientSideRowModelModule, ColDef, GetRowIdFunc, ModuleRegistry, themeQuartz } from 'ag-grid-community';
 
 import {
   FormArray,
@@ -56,6 +59,8 @@ Quill.register(
   true
 );
 
+ModuleRegistry.registerModules([ClientSideRowModelModule]);
+
 Quill.register(
   'modules/resize',
   QuillResize
@@ -72,12 +77,25 @@ interface SendHistoryDateGroup {
   entries: SendHistoryEntry[];
 }
 
+interface SendHistoryGridRow {
+  historyId: string;
+  sentAt: string;
+  email: string;
+  cc: string;
+  status: string;
+  savedTemplate: string;
+  templateVersion: string;
+  errors: string;
+  [key: string]: string;
+}
+
 
 @Component({
   selector: 'app-send',
 
   imports: [
     CommonModule,
+    AgGridAngular,
     ReactiveFormsModule,
     RecipientInput,
     QuillEditorComponent
@@ -154,6 +172,27 @@ export class Send implements OnInit {
 
   historyEntries = signal<SendHistoryEntry[]>([]);
   historyMessage = signal<string | null>(null);
+  readonly historyTheme = themeQuartz;
+  readonly historyGetRowId: GetRowIdFunc<SendHistoryGridRow> = params => params.data.historyId;
+  readonly historyDefaultColDef: ColDef<SendHistoryGridRow> = {
+    resizable: true,
+    sortable: true,
+    filter: true,
+    minWidth: 120
+  };
+  readonly historyGridColumns = computed<ColDef<SendHistoryGridRow>[]>(() => {
+    const extraNames = [...new Set(this.historyEntries().flatMap(entry => Object.keys(entry.values)))].filter(name => !this.isHistoryMetaField(name));
+    return [
+      { field: 'sentAt', headerName: 'Sent at', minWidth: 180 },
+      { field: 'email', headerName: 'Email', minWidth: 220 },
+      { field: 'cc', headerName: 'CC', minWidth: 180 },
+      { field: 'status', headerName: 'Status', minWidth: 110 },
+      { field: 'savedTemplate', headerName: 'Saved template', minWidth: 160 },
+      { field: 'templateVersion', headerName: 'Template version saved at', minWidth: 200 },
+      ...extraNames.map(name => ({ field: `column:${name}`, headerName: name, minWidth: 140 })),
+      { field: 'errors', headerName: 'Errors', minWidth: 220 }
+    ];
+  });
 
   get historyGroups(): SendHistoryDateGroup[] {
     const groups = new Map<string, SendHistoryEntry[]>();
@@ -164,6 +203,29 @@ export class Send implements OnInit {
       groups.set(date, group);
     }
     return [...groups].map(([date, entries]) => ({ date, entries }));
+  }
+
+  historyGridRows(entries: SendHistoryEntry[]): SendHistoryGridRow[] {
+    return entries.map(entry => {
+      const row: SendHistoryGridRow = {
+        historyId: entry.id,
+        sentAt: new Date(entry.sentAt).toLocaleString(),
+        email: this.historyEmail(entry),
+        cc: this.historyCc(entry),
+        status: entry.status,
+        savedTemplate: entry.template?.name ?? '',
+        templateVersion: entry.template ? new Date(entry.template.updatedAt).toLocaleString() : '',
+        errors: entry.errors.join('; ')
+      };
+      Object.entries(entry.values).forEach(([name, value]) => {
+        if (!this.isHistoryMetaField(name)) row[`column:${name}`] = value;
+      });
+      return row;
+    });
+  }
+
+  historyGridHeight(entries: SendHistoryEntry[]): number {
+    return Math.min(520, Math.max(160, 44 + entries.length * 38));
   }
 
   private async refreshHistory(): Promise<void> {
@@ -215,6 +277,17 @@ export class Send implements OnInit {
     anchor.download = `send-history-${new Date().toISOString().slice(0, 10)}.csv`;
     anchor.click();
     URL.revokeObjectURL(url);
+  }
+
+  async clearHistory(): Promise<void> {
+    if (!this.historyEntries().length || !globalThis.confirm('Clear all send history stored in this browser? This cannot be undone.')) return;
+    try {
+      await this.historyStore.clear();
+      this.historyEntries.set([]);
+      this.historyMessage.set('Send history cleared from this browser.');
+    } catch {
+      this.historyMessage.set('Could not clear send history from this browser.');
+    }
   }
 
   historyEmail(entry: SendHistoryEntry): string {
