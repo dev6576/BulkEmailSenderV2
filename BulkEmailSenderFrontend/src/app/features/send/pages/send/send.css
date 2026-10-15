@@ -958,6 +958,18 @@ code {
 .send-confirmation dt { color: #667085; }
 .confirmation-actions .send-button { width: auto; }
 .send-page button:focus-visible { outline-color: rgba(21, 94, 239, .35); }
+.send-preview-confirmation { width: min(760px, calc(100vw - 32px)); max-height: min(85vh, 900px); overflow: auto; }
+.send-preview-recipient { margin: 0 0 12px; color: #667085; }
+.send-preview-email { overflow: hidden; border: 1px solid #e2e8f0; border-radius: 9px; background: #fff; }
+.send-preview-email dl { margin: 0; }
+.send-preview-email dl > div { display: flex; gap: 14px; padding: 9px 14px; border-bottom: 1px solid #eaecf0; }
+.send-preview-email dt { min-width: 64px; color: #667085; font-weight: 600; }
+.send-preview-email dd { margin: 0; overflow-wrap: anywhere; }
+.send-preview-email .preview-email-content { min-height: 100px; padding: 16px; }
+.send-preview-attachments { padding: 12px 14px; border-top: 1px solid #eaecf0; }
+.send-preview-attachments p { margin: 6px 0 0; color: #667085; }
+.send-preview-attachments .attachment-list { margin-bottom: 0; }
+.send-preview-confirmation .send-button:disabled { cursor: wait; }
 
 @media (max-width: 700px) {
   .send-header, .send-workspace, .send-tabs, .preview-dock-header, .preview-dock-content { padding-left: 16px; padding-right: 16px; }

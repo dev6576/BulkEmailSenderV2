@@ -118,6 +118,10 @@ export class Send implements OnInit {
   sourceMode = signal<'visual' | 'html'>('visual');
   sourceHtml = '';
   showSendConfirmation = signal(false);
+  showSendPreview = signal(false);
+  isSendPreviewLoading = signal(false);
+  sendPreviewError = signal<string | null>(null);
+  sendPreviewResponse = signal<PreviewResponse | null>(null);
 
   private readonly sendApi =
     inject(SendApiService);
@@ -1313,8 +1317,41 @@ export class Send implements OnInit {
     }
 
 
-    this.showSendConfirmation.set(true);
+    const firstRecipient = this.selectedRecipients[0];
+    this.sendPreviewResponse.set(null);
+    this.sendPreviewError.set(null);
+    this.showSendPreview.set(true);
+    this.isSendPreviewLoading.set(true);
+    const formValue = this.emailForm.getRawValue();
+    this.sendApi.preview({
+      rowId: firstRecipient.rowId,
+      values: firstRecipient.values,
+      email: {
+        subject: formValue.subject,
+        body: formValue.body,
+        attachments: this.buildAttachments()
+      }
+    }).subscribe({
+      next: response => {
+        this.sendPreviewResponse.set(response);
+        this.isSendPreviewLoading.set(false);
+      },
+      error: () => {
+        this.sendPreviewError.set('Unable to generate the email preview. Please try again.');
+        this.isSendPreviewLoading.set(false);
+      }
+    });
 
+  }
+
+  continueToSendConfirmation(): void {
+    if (this.isSendPreviewLoading() || !this.sendPreviewResponse()?.isValid) return;
+    this.showSendPreview.set(false);
+    this.showSendConfirmation.set(true);
+  }
+
+  cancelSendPreview(): void {
+    this.showSendPreview.set(false);
   }
 
   cancelSendConfirmation(): void {

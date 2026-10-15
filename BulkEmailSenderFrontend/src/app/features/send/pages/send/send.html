@@ -466,10 +466,58 @@
     }
   </section>
 
+  @if (showSendPreview()) {
+    <div class="dialog-backdrop" role="presentation">
+      <section class="send-confirmation send-preview-confirmation" role="dialog" aria-modal="true" aria-labelledby="send-preview-title">
+        <h2 id="send-preview-title">Review email before sending</h2>
+        <p class="send-preview-recipient">Preview for {{ selectedRecipients[0]?.values?.['Email'] || 'the first selected recipient' }}</p>
+        @if (isSendPreviewLoading()) {
+          <div class="preview-loading">Rendering the email...</div>
+        }
+        @if (sendPreviewError()) {
+          <p class="preview-error" role="alert">{{ sendPreviewError() }}</p>
+        }
+        @if (sendPreviewResponse(); as response) {
+          @if (response.isValid && response.email) {
+            <div class="send-preview-email">
+              <dl>
+                <div><dt>To</dt><dd>{{ selectedRecipients[0]?.values?.['Email'] || 'Recipient' }}</dd></div>
+                <div><dt>Subject</dt><dd>{{ response.email.subject }}</dd></div>
+              </dl>
+              <div class="ql-editor preview-email-content" [innerHTML]="response.email.htmlBody"></div>
+              <div class="send-preview-attachments">
+                <strong>Attachments</strong>
+                @if (attachmentItems().length) {
+                  <ul class="attachment-list">
+                    @for (attachment of attachmentItems(); track $index) {
+                      <li><span class="attachment-name">📄 {{ attachment.fileName }}</span><span class="attachment-size">{{ formatFileSize(attachment.size) }}</span></li>
+                    }
+                  </ul>
+                } @else {
+                  <p>No attachments</p>
+                }
+              </div>
+            </div>
+          } @else {
+            <div class="preview-error" role="alert">
+              <strong>Preview validation failed.</strong>
+              @for (error of response.errors; track $index) { <p>{{ error.message }}</p> }
+            </div>
+          }
+        }
+        <div class="confirmation-actions">
+          <button type="button" class="secondary-button" (click)="cancelSendPreview()">Cancel</button>
+          <button type="button" class="send-button" [disabled]="isSendPreviewLoading() || !sendPreviewResponse()?.isValid" (click)="continueToSendConfirmation()">Continue</button>
+        </div>
+      </section>
+    </div>
+  }
+
   @if (showSendConfirmation()) {
     <div class="dialog-backdrop" role="presentation">
       <section class="send-confirmation" role="dialog" aria-modal="true" aria-labelledby="send-confirmation-title">
-        <h2 id="send-confirmation-title">Send email?</h2>
+        <h2 id="send-confirmation-title">Send to {{ selectedRecipients.length }} people?</h2>
+        <p>Do you want to proceed with sending these emails?</p>
         <dl>
           <div><dt>Recipients</dt><dd>{{ selectedRecipients.length }}</dd></div>
           <div><dt>Subject</dt><dd>{{ emailForm.controls.subject.value }}</dd></div>
